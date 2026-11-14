@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+allowBuilds:
+  esbuild: true
+  vue-demi: false
+minimumReleaseAgeExclude:
+  - jsdom@31.0.1
+  - vue-router@5.5.1

@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "@kv/ui/theme.css";
+/* Tailwind must also see classes used inside the shared UI package. */
+@source "../../../packages/ui/src";
+
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Printing (QR label sheets): A4 without browser margins, white background. */
+@media print {
+  @page { size: A4; margin: 0; }
+  html, body { background: #fff !important; }
+}

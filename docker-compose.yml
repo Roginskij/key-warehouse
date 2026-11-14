@@ -1,0 +1,36 @@
+services:
+  # optional containerised DB: `docker compose --profile db up`
+  # by default api uses the host's local Postgres (see DATABASE_URL below)
+  db:
+    image: postgres:16
+    profiles: [db]
+    environment:
+      POSTGRES_USER: kw
+      POSTGRES_PASSWORD: kw
+      POSTGRES_DB: key_warehouse
+    ports: ["5433:5432"]
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kw -d key_warehouse"]
+      interval: 2s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    # 8025: web UI with all sent e-mails; 1025: SMTP, so a backend run outside Docker
+    # (uv run uvicorn …) can send its mails here too
+    ports: ["8025:8025", "1025:1025"]
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://nikita@host.docker.internal:5432/key_warehouse
+      JWT_SECRET: dev-only-secret-change-me-0123456789abcdef
+      EMAIL_BACKEND: smtp
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_STARTTLS: "false"
+    ports: ["8000:8000"]
+
+volumes:
+  db-data:

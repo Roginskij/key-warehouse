@@ -1,0 +1,39 @@
+/* KeyVerhaus theme: graphite + soft yellow. Source of truth: docs/design.md */
+@theme {
+  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-ground: #ecebe8;
+  --color-surface: #ffffff;
+  --color-line: #dad9d4;
+  --color-line-strong: #c9c8c2;
+  --color-ink: #2b2b2e;
+  --color-muted: #5a5a61;
+  --color-faint: #6e6e75;
+
+  --color-graphite: #3a3a3f;
+  --color-graphite-2: #4a4a50;
+  --color-on-graphite: #ffffff;
+  --color-on-graphite-muted: #dad9d4;
+
+  --color-primary: #f2d06b;
+  --color-primary-hover: #ecc552;
+  --color-on-primary: #2b2b2e;
+  --color-primary-soft: #f8edc4;
+
+  --color-warn-bg: #fbe7da;
+  --color-warn: #8a3b12;
+  --color-danger: #b42318;
+  --color-danger-bg: #fde8e6;
+
+  --radius-control: 12px;
+  --radius-card: 16px;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-ground text-ink font-sans antialiased; margin: 0; }
+  :focus-visible { outline: 3px solid #2b2b2e; outline-offset: 2px; }
+  input::placeholder, textarea::placeholder { color: var(--color-faint); }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}

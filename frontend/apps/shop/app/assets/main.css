@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@kv/ui/theme.css";
+@source "../../../../packages/ui/src";
+
+/* No web fonts from Google on the public site (GDPR): system fonts only. */
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
