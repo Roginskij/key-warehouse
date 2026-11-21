@@ -116,7 +116,8 @@ class PublicWorkshop(BaseModel):
     about: str | None
     verified: bool
     in_stock: bool = False
-    price: PublicPrice | None = None
+    price: PublicPrice | None = None  # the blank
+    cut_price: PublicPrice | None = None  # making the key
 
 
 class WaitlistIn(BaseModel):
@@ -153,6 +154,12 @@ async def _brief(session, item: CatalogItem) -> PublicKeyBrief:
         codes=[PublicCode(brand=c.brand.name, code=c.code) for c in item.codes],
         image=await _primary_image(session, item.id),
     )
+
+
+def _price(w: Workshop, amount, currency) -> PublicPrice | None:
+    if w.price_display == PriceDisplay.ASK or amount is None or not currency:
+        return None
+    return PublicPrice(mode=w.price_display, amount=str(amount), currency=currency)
 
 
 def _workshop_out(w: Workshop) -> PublicWorkshop:
@@ -278,10 +285,9 @@ async def workshops_for_key(
         s = stock.get(w.id)
         if s:
             o.in_stock = True
-            if w.price_display != PriceDisplay.ASK and s.sale_price is not None and s.sale_currency:
-                o.price = PublicPrice(
-                    mode=w.price_display, amount=str(s.sale_price), currency=s.sale_currency
-                )
+            # Both prices follow the workshop's choice: hidden / "from N" / exact.
+            o.price = _price(w, s.sale_price, s.sale_currency)
+            o.cut_price = _price(w, s.cut_price, s.cut_currency)
         out.append(o)
     wanted = (city or "").strip().lower()
     out.sort(

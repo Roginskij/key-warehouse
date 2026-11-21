@@ -135,7 +135,7 @@ Main screens and their endpoints:
 |---|---|
 | Stock list | `GET items?q=&kind=&location_id=&low_stock=&stale=&linked=&archived=&sort=name\|quantity\|updated` — `q` finds by own number, ANY catalog number of the linked item, name, brand, car |
 | Item card | `GET items/{id}`, `PATCH items/{id}`, `DELETE items/{id}` (archive, needs qty 0), `POST items/{id}/restore`, photo `PUT/GET items/{id}/photo` (jpeg/png/webp ≤ 5 MB; GET needs the auth header → fetch as blob) |
-| One-tap +/− | `POST items/{id}/movements {"type":"adjust","quantity":1}` / `-1` → returns `{movement, item}` |
+| Correction (Undo) | `POST items/{id}/movements {"type":"adjust","quantity":±n}` → returns `{movement, item}` |
 | Sale / receipt / write-off / transfer | same endpoint, `type`: `sale` (price defaults to item sale price; `client_name`, `client_phone` optional), `receipt`, `writeoff`, `transfer` (`location_id` → `to_location_id`) |
 | History | `GET movements?item_id=&type=&user_id=&date_from=&date_to=` (journal) and `GET audit?item_id=` (edits of prices/names) |
 | Storage locations | `GET/POST locations`, `PATCH/DELETE locations/{id}`; flat list with `parent_id` → build the tree; `is_default` location: show a translated "Main" label |

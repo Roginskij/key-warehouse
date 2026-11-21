@@ -32,6 +32,7 @@ FIELDS = [
     "kind",
     "quantity",
     "sale_price",
+    "cut_price",
     "min_quantity",
     "vehicles",
     "location",
@@ -90,6 +91,27 @@ SYNONYMS: dict[str, list[str]] = {
         "coche",
         "vehículo",
         "veicolo",
+    ],
+    # Before "sale_price": "Ціна виготовлення" also contains "ціна".
+    "cut_price": [
+        "ціна виготовлення",
+        "цена изготовления",
+        "виготовлення",
+        "изготовление",
+        "нарізка",
+        "нарезка",
+        "робота",
+        "работа",
+        "cutting price",
+        "cutting",
+        "cut",
+        "dorobienie",
+        "nachmachen",
+        "anfertigung",
+        "reproduction",
+        "duplicado",
+        "copia",
+        "duplicazione",
     ],
     "sale_price": [
         "ціна продажу",
@@ -551,6 +573,8 @@ async def run_import(
                     vehicles=(cell(row, "vehicles") or None),
                     sale_price=sale,
                     sale_currency=currency if sale is not None else None,
+                    cut_price=(cut := parse_decimal(cell(row, "cut_price"))),
+                    cut_currency=currency if cut is not None else None,
                     min_quantity=parse_int(cell(row, "min_quantity")),
                     notes=cell(row, "notes"),
                     marked_stale_at=now if (cell(row, "stale") or "").lower() in TRUTHY else None,
@@ -620,6 +644,8 @@ def export_xlsx(items: list[InventoryItem], locations: dict) -> bytes:
         "Locations",
         "Sale price",
         "Sale currency",
+        "Cutting price",
+        "Cutting currency",
     ]
     headers += ["Notes", "Last movement"]
     ws.append(headers)
@@ -645,6 +671,8 @@ def export_xlsx(items: list[InventoryItem], locations: dict) -> bytes:
             locs,
             it.sale_price,
             it.sale_currency,
+            it.cut_price,
+            it.cut_currency,
         ]
         row += [it.notes, _naive(it.last_movement_at)]
         ws.append(row)

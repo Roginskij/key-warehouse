@@ -52,7 +52,7 @@
           <AttributesEditor v-model="form.attributes" :kind="form.kind" :error="attrError" />
         </div>
         <template v-if="electronic">
-          <UIField v-model="form.frequency_mhz" :label="t('item.form.frequency')" inputmode="decimal" placeholder="433.92" />
+          <UIField v-model="form.frequency_mhz" :label="t('item.form.frequency')" inputmode="decimal" :decimals="3" placeholder="433.92" />
           <UIField v-model="form.chip_type" :label="t('item.form.chip')" placeholder="ID46" />
           <UIField v-model="form.fcc_id" label="FCC ID" />
         </template>
@@ -75,8 +75,10 @@
     </section>
 
     <section class="grid grid-cols-1 gap-4 rounded-card border border-line bg-surface p-4 sm:grid-cols-2">
-      <UIField v-model="form.sale_price" :label="t('item.salePrice')" inputmode="decimal" :error="errors.sale_price" />
+      <UIField v-model="form.sale_price" :label="t('item.salePrice')" inputmode="decimal" :decimals="2" :error="errors.sale_price" />
       <UISelect v-model="form.sale_currency" :label="t('item.form.currency')" :options="curOptions" />
+      <UIField v-model="form.cut_price" :label="t('item.cutPrice')" inputmode="decimal" :decimals="2" :hint="t('item.form.cutPriceHint')" :error="errors.cut_price" />
+      <UISelect v-model="form.cut_currency" :label="t('item.form.currency')" :options="curOptions" />
       <UIField v-model="form.min_quantity" :label="t('item.form.min')" inputmode="numeric" :hint="t('item.form.minHint')" />
       <label class="flex items-start gap-3 sm:col-span-2">
         <input v-model="form.public_visible" type="checkbox" class="mt-0.5 size-5 shrink-0 accent-ink" />
@@ -149,6 +151,8 @@ const form = ref({
   location_id: null as string | null,
   sale_price: '',
   sale_currency: '',
+  cut_price: '',
+  cut_currency: '',
   min_quantity: '0',
   frequency_mhz: '',
   chip_type: '',
@@ -170,6 +174,8 @@ watch(
       code: it.code ?? '',
       sale_price: it.sale_price ?? '',
       sale_currency: it.sale_currency ?? '',
+      cut_price: it.cut_price ?? '',
+      cut_currency: it.cut_currency ?? '',
       min_quantity: String(it.min_quantity),
       frequency_mhz: it.frequency_mhz ?? '',
       chip_type: it.chip_type ?? '',
@@ -275,6 +281,8 @@ async function submit() {
     name: txt(f.name),
     sale_price: dec(f.sale_price),
     sale_currency: f.sale_price.trim() ? f.sale_currency || null : null,
+    cut_price: dec(f.cut_price),
+    cut_currency: f.cut_price.trim() ? f.cut_currency || null : null,
     min_quantity: int(f.min_quantity),
     notes: txt(f.notes),
     public_visible: f.public_visible,

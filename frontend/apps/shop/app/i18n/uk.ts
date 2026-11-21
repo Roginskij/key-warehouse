@@ -62,6 +62,8 @@ export default {
     inStock: 'Є в наявності',
     priceAsk: 'Ціну уточнюйте',
     priceFrom: 'від {price}',
+    priceBlank: 'Заготовка',
+    priceCut: 'Виготовлення',
     verified: 'Перевірена майстерня',
     call: 'Подзвонити',
     route: 'Маршрут',

@@ -11,7 +11,10 @@
       </div>
       <div v-if="showStock && w.in_stock" class="flex flex-col items-end gap-0.5">
         <span class="rounded-md bg-primary px-2 py-0.5 text-[13px] font-bold text-on-primary">{{ t('key.inStock') }}</span>
-        <span class="text-[15px] font-semibold">{{ priceText }}</span>
+        <!-- No price shown: "ask for the price". Otherwise the blank and the work, each if set. -->
+        <span v-if="!w.price && !w.cut_price" class="text-[15px] font-semibold">{{ t('key.priceAsk') }}</span>
+        <span v-if="w.price" class="text-[15px]">{{ t('key.priceBlank') }}: <b>{{ priceText(w.price) }}</b></span>
+        <span v-if="w.cut_price" class="text-[15px]">{{ t('key.priceCut') }}: <b>{{ priceText(w.cut_price) }}</b></span>
       </div>
     </div>
     <p v-if="w.about" class="m-0 text-[15px]">{{ w.about }}</p>
@@ -34,12 +37,10 @@ import { buttonClass, UIIcon } from '@kv/ui'
 const props = defineProps<{ w: PublicWorkshop; keySlug?: string; showStock?: boolean }>()
 const { t, lang } = useLang()
 
-const priceText = computed(() => {
-  const p = props.w.price
-  if (!p) return t('key.priceAsk')
+function priceText(p: { mode: string; amount: string; currency: string }) {
   const money = new Intl.NumberFormat(lang.value, { style: 'currency', currency: p.currency, maximumFractionDigits: 0 }).format(Number(p.amount))
   return p.mode === 'from' ? t('key.priceFrom', { price: money }) : money
-})
+}
 // OpenStreetMap: no Google tracking; coordinates if given, otherwise the address.
 const mapUrl = computed(() => {
   const w = props.w

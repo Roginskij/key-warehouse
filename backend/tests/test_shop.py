@@ -150,13 +150,14 @@ async def test_workshop_profile_and_find_a_workshop(client, boss):
                 "code": "HU66",
                 "quantity": 3,
                 "sale_price": "250",
+                "cut_price": "400",
             },
             headers=h,
         )
     ).json()
     # Stock is hidden from the public until the owner marks it.
     ws = (await client.get(f"{PUB}/keys/{slug}/workshops")).json()
-    assert ws[0]["in_stock"] is False and ws[0]["price"] is None
+    assert ws[0]["in_stock"] is False and ws[0]["price"] is None and ws[0]["cut_price"] is None
 
     await client.patch(
         f"{API}/workshops/{wid}/inventory/items/{stock['id']}",
@@ -166,6 +167,21 @@ async def test_workshop_profile_and_find_a_workshop(client, boss):
     ws = (await client.get(f"{PUB}/keys/{slug}/workshops", params={"country": "UA"})).json()
     assert ws[0]["in_stock"] is True
     assert ws[0]["price"] == {"mode": "exact", "amount": "250.00", "currency": "UAH"}
+    assert ws[0]["cut_price"] == {"mode": "exact", "amount": "400.00", "currency": "UAH"}
+
+    # "Ask for the price": neither price is shown.
+    await client.put(
+        f"{API}/workshops/{wid}/profile",
+        json={
+            "public_listed": True,
+            "public_city": "Київ",
+            "public_phone": "+380501112233",
+            "price_display": "ask",
+        },
+        headers=h,
+    )
+    ws = (await client.get(f"{PUB}/keys/{slug}/workshops")).json()
+    assert ws[0]["in_stock"] is True and ws[0]["price"] is None and ws[0]["cut_price"] is None
     assert "tax_id" not in ws[0]
 
     assert (await client.get(f"{PUB}/cities")).json() == ["Київ"]

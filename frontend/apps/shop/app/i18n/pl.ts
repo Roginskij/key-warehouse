@@ -64,6 +64,8 @@ export default {
     inStock: 'Na stanie',
     priceAsk: 'Cena do uzgodnienia',
     priceFrom: 'od {price}',
+    priceBlank: 'Półfabrykat',
+    priceCut: 'Dorobienie',
     verified: 'Zweryfikowany warsztat',
     call: 'Zadzwoń',
     route: 'Trasa',

@@ -122,7 +122,7 @@
             <textarea v-model="form.description" rows="3" class="rounded-control border-2 border-line-strong p-3 text-[16px] outline-none focus:border-ink" />
           </label>
           <div class="grid gap-3 sm:grid-cols-3">
-            <UIField v-model="form.frequency_mhz" :label="t('item.form.frequency')" inputmode="decimal" />
+            <UIField v-model="form.frequency_mhz" :label="t('item.form.frequency')" inputmode="decimal" :decimals="3" />
             <UIField v-model="form.chip_type" :label="t('item.form.chip')" />
             <UIField v-model="form.fcc_id" label="FCC ID" />
           </div>

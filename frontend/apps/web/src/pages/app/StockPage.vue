@@ -88,7 +88,7 @@
         aria-hidden="true"
       >
         <span>{{ t('stock.cols.name') }}</span><span>{{ t('stock.cols.code') }}</span><span>{{ t('stock.cols.place') }}</span>
-        <span class="text-right">{{ t('stock.cols.price') }}</span><span class="w-[132px] text-center">{{ t('stock.cols.qty') }}</span>
+        <span class="text-right">{{ t('stock.cols.price') }}</span><span class="w-20 text-right">{{ t('stock.cols.qty') }}</span>
       </div>
       <ul class="m-0 flex list-none flex-col gap-2 p-0 lg:gap-0">
         <StockRow
@@ -96,9 +96,6 @@
           :key="item.id"
           :item="item"
           :places="places"
-          :busy="busyId === item.id"
-          @minus="step(item, -1)"
-          @plus="step(item, 1)"
         />
       </ul>
     </section>
@@ -126,7 +123,7 @@ import StockRow from '@/components/stock/StockRow.vue'
 import { raw } from '@/lib/api'
 import { errorText } from '@/lib/errors'
 import { num } from '@/lib/format'
-import { type Item, useItems, useLocationNames, useMove } from '@/lib/queries'
+import { useItems, useLocationNames } from '@/lib/queries'
 import { useSession } from '@/stores/session'
 import { useToast } from '@/stores/toast'
 
@@ -161,13 +158,6 @@ const items = computed(() => data.value?.items ?? [])
 const pieces = computed(() => items.value.reduce((s, i) => s + i.quantity, 0))
 const hasFilters = computed(() => !!debounced.value || filter.value !== 'all' || !!locationId.value)
 
-const { moveWithUndo } = useMove()
-const busyId = ref<string | null>(null)
-async function step(item: Item, delta: 1 | -1) {
-  busyId.value = item.id
-  await moveWithUndo(item, { type: 'adjust', quantity: delta }, delta > 0 ? '+1' : '−1')
-  busyId.value = null
-}
 
 async function exportExcel() {
   try {

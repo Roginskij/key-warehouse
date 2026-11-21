@@ -7,7 +7,7 @@
     >
       <input
         :id="id"
-        v-model="model"
+        :value="model ?? ''"
         :type="inputType"
         :placeholder="placeholder"
         :autocomplete="autocomplete"
@@ -16,6 +16,7 @@
         :aria-invalid="!!error || undefined"
         :aria-describedby="error || hint ? `${id}-msg` : undefined"
         class="min-w-0 flex-1 bg-transparent text-[16px] outline-none"
+        @input="onInput"
       />
       <button
         v-if="type === 'password'"
@@ -47,6 +48,8 @@ const props = withDefaults(
     hint?: string
     autocomplete?: string
     inputmode?: 'text' | 'decimal' | 'numeric' | 'email' | 'search' | 'tel'
+    /** For inputmode="decimal": at most this many digits after the separator (prices: 2). */
+    decimals?: number
     required?: boolean
     showPasswordLabel?: string
   }>(),
@@ -56,4 +59,24 @@ const model = defineModel<string | number | null>()
 const id = useId()
 const reveal = ref(false)
 const inputType = computed(() => (props.type === 'password' && reveal.value ? 'text' : props.type))
+
+/** Number fields accept only what makes a number: "numeric" — digits; "decimal" — digits
+ *  and one "," or "." (keyboards in Ukraine/EU type a comma). Letters never get in. */
+function clean(raw: string): string {
+  if (props.inputmode === 'numeric') return raw.replace(/\D/g, '')
+  if (props.inputmode !== 'decimal') return raw
+  let v = raw.replace(/[^\d.,]/g, '')
+  const sep = v.search(/[.,]/)
+  if (sep >= 0) {
+    const fraction = v.slice(sep + 1).replace(/[.,]/g, '')
+    v = v.slice(0, sep + 1) + (props.decimals !== undefined ? fraction.slice(0, props.decimals) : fraction)
+  }
+  return v
+}
+function onInput(e: Event) {
+  const el = e.target as HTMLInputElement
+  const v = clean(el.value)
+  if (el.value !== v) el.value = v // drop the rejected character right away
+  model.value = v
+}
 </script>

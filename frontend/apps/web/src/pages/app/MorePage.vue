@@ -56,7 +56,7 @@
       </ul>
       <form class="grid grid-cols-[6rem_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[6rem_minmax(0,1fr)_auto]" @submit.prevent="saveRate">
         <UISelect v-model="rateCur" :label="t('item.form.currency')" :options="rateOptions" />
-        <UIField v-model="rateVal" :label="t('more.rate')" inputmode="decimal" placeholder="41.50" />
+        <UIField v-model="rateVal" :label="t('more.rate')" inputmode="decimal" :decimals="6" placeholder="41.50" />
         <UIButton type="submit" class="col-span-2 h-12 sm:col-span-1">{{ t('common.save') }}</UIButton>
       </form>
     </section>

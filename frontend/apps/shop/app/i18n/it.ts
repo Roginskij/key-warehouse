@@ -64,6 +64,8 @@ export default {
     inStock: 'Disponibile',
     priceAsk: 'Prezzo su richiesta',
     priceFrom: 'da {price}',
+    priceBlank: 'Grezzo',
+    priceCut: 'Duplicazione',
     verified: 'Officina verificata',
     call: 'Chiama',
     route: 'Percorso',

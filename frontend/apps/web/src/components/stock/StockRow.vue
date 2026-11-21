@@ -21,26 +21,21 @@
     <span class="hidden truncate text-[15px] text-muted lg:block">{{ code }}</span>
     <span class="hidden truncate text-[15px] text-muted lg:block">{{ place }}</span>
     <span class="hidden text-right text-[15px] font-semibold lg:block">{{ money(item.sale_price, item.sale_currency) }}</span>
-    <UIQty
-      :value="item.quantity"
-      :busy="busy"
-      :minus-label="t('stock.minusOne', { name: item.name })"
-      :plus-label="t('stock.plusOne', { name: item.name })"
-      @minus="$emit('minus')"
-      @plus="$emit('plus')"
-    />
+    <!-- Quantity changes only through Sold / Brought / Broken / Move on the item page -->
+    <span
+      class="min-w-12 text-right text-[18px] font-bold tabular-nums lg:w-20"
+      :class="item.quantity === 0 ? 'text-muted' : item.needs_reorder ? 'text-warn' : 'text-ink'"
+    >{{ t('common.pcs', { n: item.quantity }) }}</span>
   </li>
 </template>
 
 <script setup lang="ts">
-import { UIQty } from '@kv/ui'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { money } from '@/lib/format'
 import type { Item } from '@/lib/queries'
 
-const props = defineProps<{ item: Item; places: Map<string, string>; busy?: boolean }>()
-defineEmits<{ minus: []; plus: [] }>()
+const props = defineProps<{ item: Item; places: Map<string, string> }>()
 const { t } = useI18n()
 
 const code = computed(() => {

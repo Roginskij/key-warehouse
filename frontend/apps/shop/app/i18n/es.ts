@@ -64,6 +64,8 @@ export default {
     inStock: 'En stock',
     priceAsk: 'Consultar precio',
     priceFrom: 'desde {price}',
+    priceBlank: 'Llave en bruto',
+    priceCut: 'Hacer la llave',
     verified: 'Taller verificado',
     call: 'Llamar',
     route: 'Ruta',

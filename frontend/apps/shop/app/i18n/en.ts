@@ -64,6 +64,8 @@ export default {
     inStock: 'In stock',
     priceAsk: 'Ask for the price',
     priceFrom: 'from {price}',
+    priceBlank: 'Blank',
+    priceCut: 'Making the key',
     verified: 'Verified workshop',
     call: 'Call',
     route: 'Route',

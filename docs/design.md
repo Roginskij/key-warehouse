@@ -4,15 +4,16 @@ Mockups: https://claude.ai/artifact/7z6FRWGihqGd4BdbHV8EU5 (6 phone screens, Ukr
 
 ## Principles ("a grandmother can use it")
 
-- Phone first, one hand. Touch targets ≥ 44 px (list +/− 44, card +/− 52, main button 52).
-- Web version: left sidebar menu, table with +/− in the row, detail panel on the right
+- Phone first, one hand. Touch targets ≥ 44 px (main button 52).
+- Web version: left sidebar menu, table with the quantity in the row, detail panel on the right
   (stacks under the table on narrow screens).
 - Body text 16–17 px, titles 26–30 px bold. Never grey text lighter than #4B5563.
 - One main action per screen: big yellow button (52 px) or floating "Додати".
 - Bottom tab bar, 4 tabs with icon AND label: Склад, Замовити (badge = items below
   minimum), Місця, Ще. No hidden menus, no gestures needed.
 - Plain words instead of terms: Продав / Привіз / Зламався (not sale / receipt / write-off).
-- Undo instead of "are you sure?": after +/− a dark bar "−1 · name · Скасувати" for 5 s.
+- Undo instead of "are you sure?": after a sale / receipt / write-off a dark bar
+  "Продано 1 · Скасувати" for 5 s.
 - Empty states explain what to do next with one button.
 - Import is a 3-step wizard: file → check columns (pre-filled) → preview → done.
 - Colour is never the only signal: low stock = amber label WITH text "Мало · мінімум 5".

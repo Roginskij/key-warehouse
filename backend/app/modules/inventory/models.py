@@ -47,7 +47,7 @@ class MovementType(StrEnum):
     RECEIPT = "receipt"  # bought / received (+)
     SALE = "sale"  # used for a client (−), price + optional client → future receipt
     WRITEOFF = "writeoff"  # broken / lost (−)
-    ADJUST = "adjust"  # correction after a count (±), also the one-tap +/−
+    ADJUST = "adjust"  # correction (±): "Undo" of a sale / receipt / write-off, a recount
     TRANSFER = "transfer"  # between locations, total unchanged
 
 
@@ -101,6 +101,9 @@ class InventoryItem(UUIDPk, Timestamps, Base):
 
     sale_price: Mapped[Decimal | None] = mapped_column(Money)
     sale_currency: Mapped[str | None] = mapped_column(ForeignKey("currencies.code"))
+    # Price of the work: cutting / making a key from this blank.
+    cut_price: Mapped[Decimal | None] = mapped_column(Money)
+    cut_currency: Mapped[str | None] = mapped_column(ForeignKey("currencies.code"))
 
     quantity: Mapped[int] = mapped_column(Integer, default=0)  # total over all locations
     min_quantity: Mapped[int] = mapped_column(Integer, default=0)  # "time to reorder" below this

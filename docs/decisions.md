@@ -58,7 +58,8 @@ Business plan: `~/Desktop/mvp-plan.md` (stage 1 = MVP).
 - Quantities are whole pieces. Stock can't go below zero.
 - Every quantity change is a movement (initial / receipt / sale / writeoff / adjust /
   transfer) with date, author, balance after; movements are never edited.
-  One-tap +/− = `adjust` ±1. A sale stores price and optional client → receipt later.
+  A sale stores price and optional client → receipt later. `adjust` (±) is the correction
+  behind "Undo".
 - Selling without a location takes from the fullest location; if stock is split and
   no single location has enough, the user must choose.
 - A default "Main" location is created per workshop automatically.
@@ -324,3 +325,22 @@ Goal: one structure for everybody, clean search and links — the stock is not a
   it. Linked stock items show the card's characteristics, read-only.
 - The site shows them on the key page (labels from the database in the page's language)
   and in the JSON-LD (`additionalProperty`).
+
+## 2026-11-20 — price for making the key (owner's request)
+
+- Stock item: `cut_price` + `cut_currency` ("Ціна виготовлення ключа"), next to the sale
+  price of the blank. Optional; currency defaults to the workshop's; converted to the base
+  currency like the sale price. In Excel import ("Ціна виготовлення", "нарізка", "cut"…) and
+  export ("Cutting price").
+- The site shows it by the same rules as the blank's price: only for items marked "show on
+  the site" and in stock, and only as the workshop chose (hidden / "from N" / exact). The
+  workshop card says "Blank: … · Making the key: …"; with neither — "ask for the price".
+- Fixed on the way: a CSV whose rows have fewer cells than the header (common in Excel
+  exports with ";") was read with the wrong delimiter; the header line now decides.
+
+## 2026-11-20 — no +/− buttons (owner's decision)
+
+The quick +1 / −1 buttons are gone from the stock list and the item card: the quantity is
+just shown. It changes only with Sold / Brought / Broken / Move, which say what happened
+(sale with price and customer, receipt, write-off), so the history stays meaningful.
+There was no separate endpoint; the `adjust` movement stays — "Undo" uses it.

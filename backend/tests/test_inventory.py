@@ -64,10 +64,12 @@ async def test_create_item_with_quantity_and_one_tap(client, owner):
         code="HU66",
         quantity=5,
         sale_price="120",
+        cut_price="350",
         min_quantity=3,
     )
     assert item["quantity"] == 5
     assert item["sale_currency"] == "UAH"  # defaults to workshop base currency
+    assert (item["cut_price"], item["cut_currency"]) == ("350.00", "UAH")
     assert len(item["levels"]) == 1
 
     r = await _move(client, h, base, item["id"], type="adjust", quantity=-1)
@@ -303,10 +305,10 @@ async def test_edit_history_and_archive(client, owner):
 
 
 UA_TABLE = (
-    "Назва;Артикул;Виробник;К-сть;Ціна закупівлі;Ціна;Марка авто;Ящик;Мін\n"
-    "Заготовка VW;HU66;Silca;10;1,50;120;VW Golf;Ящик 1;5\n"
+    "Назва;Артикул;Виробник;К-сть;Ціна закупівлі;Ціна;Марка авто;Ящик;Мін;Ціна виготовлення\n"
+    "Заготовка VW;HU66;Silca;10;1,50;120;VW Golf;Ящик 1;5;300\n"
     "Брелок Ford 3 кн;FO21-R;Ilco;2;250;800;Ford Focus;;\n"
-    ";;;;;;;;\n"
+    ";;;;;;;;;\n"
     "Чип ID46;ID46;;abc;;;;;\n"
     "Заготовка VW дубль;HU-66;silca;1;;;;;\n"
     "Щось своє;Q-1;;1;;;;;\n"
@@ -328,6 +330,7 @@ async def test_import_analyze_preview_and_apply(client, owner):
         "quantity": "К-сть",
         # "Ціна закупівлі" is a cost column: never suggested (and never taken for "Ціна").
         "sale_price": "Ціна",
+        "cut_price": "Ціна виготовлення",
         "min_quantity": "Мін",
         "vehicles": "Марка авто",
         "location": "Ящик",
@@ -351,7 +354,12 @@ async def test_import_analyze_preview_and_apply(client, owner):
 
     items = {i["name"]: i for i in (await client.get(f"{base}/items", headers=h)).json()["items"]}
     vw = items["Заготовка VW"]
-    assert (vw["quantity"], vw["sale_price"], vw["min_quantity"]) == (10, "120.00", 5)
+    assert (vw["quantity"], vw["sale_price"], vw["min_quantity"], vw["cut_price"]) == (
+        10,
+        "120.00",
+        5,
+        "300.00",
+    )
     assert items["Брелок Ford 3 кн"]["kind"] == "remote"  # recognized from the name
     locs = {loc["name"] for loc in (await client.get(f"{base}/locations", headers=h)).json()}
     assert "Ящик 1" in locs

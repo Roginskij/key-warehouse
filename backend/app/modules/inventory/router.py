@@ -115,6 +115,9 @@ def item_out(item: InventoryItem, ctx: Ctx, rates: dict[str, Decimal]) -> StockI
         sale_price=item.sale_price,
         sale_currency=item.sale_currency,
         sale_price_in_base=service.to_base(item.sale_price, item.sale_currency, rates),
+        cut_price=item.cut_price,
+        cut_currency=item.cut_currency,
+        cut_price_in_base=service.to_base(item.cut_price, item.cut_currency, rates),
         catalog_item=brief_out(catalog)
         if catalog and catalog.status == ItemStatus.ACTIVE
         else None,
@@ -288,7 +291,8 @@ async def list_items(
 async def create_item(data: StockItemCreateIn, ctx: CtxDep, session: SessionDep):
     """From the catalog (catalog_item_id) or, if the key is not there, kind + name +
     brand from the list + number: such an item works at once and goes to the admin."""
-    await _check_currency(session, data.sale_currency)
+    for cur in (data.sale_currency, data.cut_currency):
+        await _check_currency(session, cur)
     cat = None
     if data.catalog_item_id:
         cat = await resolve_item(session, data.catalog_item_id)
@@ -333,12 +337,16 @@ async def create_item(data: StockItemCreateIn, ctx: CtxDep, session: SessionDep)
         ),
         sale_price=data.sale_price,
         sale_currency=data.sale_currency,
+        cut_price=data.cut_price,
+        cut_currency=data.cut_currency,
         min_quantity=data.min_quantity,
         notes=data.notes,
         public_visible=data.public_visible,
     )
     if item.sale_price is not None and not item.sale_currency:
         item.sale_currency = ctx.workshop.base_currency
+    if item.cut_price is not None and not item.cut_currency:
+        item.cut_currency = ctx.workshop.base_currency
     if data.stale:
         item.marked_stale_at = utcnow()
     service.apply_code(item, brand, code)
@@ -381,7 +389,8 @@ async def update_item(
 ):
     item = await service.get_item(session, ctx.wid, item_id)
     changes = data.model_dump(exclude_unset=True)
-    await _check_currency(session, data.sale_currency)
+    for cur in (data.sale_currency, data.cut_currency):
+        await _check_currency(session, cur)
     if item.catalog_item_id and CATALOG_FIELDS & changes.keys():
         raise AppError(
             "inventory.catalog_fields_locked",
@@ -438,6 +447,8 @@ async def update_item(
     base = ctx.workshop.base_currency
     if item.sale_price is not None and not item.sale_currency:
         item.sale_currency = base
+    if item.cut_price is not None and not item.cut_currency:
+        item.cut_currency = base
     if relink:
         # New number: maybe it is in the catalog now, otherwise it goes to review again.
         await service.auto_link(session, ctx.user, item)
@@ -512,9 +523,9 @@ async def set_catalog_link(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_movement(item_id: uuid.UUID, data: MovementIn, ctx: CtxDep, session: SessionDep):
-    """One-tap +/−: {"type": "adjust", "quantity": 1} or -1.
-    Sale: {"type": "sale", "quantity": 1, "unit_price"?, "client_name"?} — price defaults
-    to the item's sale price."""
+    """Sale / receipt / write-off / transfer. Sale: {"type": "sale", "quantity": 1,
+    "unit_price"?, "client_name"?} — price defaults to the item's sale price.
+    "adjust" (±) is the correction behind "Undo"."""
     if data.type == MovementType.INITIAL:
         raise AppError("inventory.bad_movement_type", message="'initial' is set on creation only")
     await _check_currency(session, data.currency)

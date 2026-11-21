@@ -5,7 +5,7 @@
       <UISelect v-if="showFrom" v-model="from" :label="t('move.from')" :options="fromOptions" />
       <UISelect v-if="kind === 'receipt' || kind === 'transfer'" v-model="to" :label="t('move.to')" :options="locOptions" />
       <template v-if="kind === 'sale'">
-        <UIField v-model="price" :label="t('move.price', { cur: item.sale_currency ?? '' })" inputmode="decimal" />
+        <UIField v-model="price" :label="t('move.price', { cur: item.sale_currency ?? '' })" inputmode="decimal" :decimals="2" />
         <details class="rounded-control border border-line px-3 py-2">
           <summary class="cursor-pointer py-1 text-[15px] font-semibold">{{ t('move.client') }}</summary>
           <div class="flex flex-col gap-3 pt-3">

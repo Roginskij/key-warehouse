@@ -64,6 +64,8 @@ export default {
     inStock: 'Vorrätig',
     priceAsk: 'Preis auf Anfrage',
     priceFrom: 'ab {price}',
+    priceBlank: 'Rohling',
+    priceCut: 'Nachmachen',
     verified: 'Geprüfte Werkstatt',
     call: 'Anrufen',
     route: 'Route',

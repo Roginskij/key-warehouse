@@ -66,6 +66,8 @@ class StockItemCreateIn(BaseModel):
 
     sale_price: Decimal | None = PriceField
     sale_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    cut_price: Decimal | None = PriceField  # making the key
+    cut_currency: str | None = Field(default=None, min_length=3, max_length=3)
     min_quantity: int = Field(default=0, ge=0, le=1_000_000)
     notes: str | None = Field(default=None, max_length=5000)
     public_visible: bool = False
@@ -73,7 +75,7 @@ class StockItemCreateIn(BaseModel):
     location_id: uuid.UUID | None = None
     stale: bool = False
 
-    _cur = field_validator("sale_currency")(_upper)
+    _cur = field_validator("sale_currency", "cut_currency")(_upper)
 
 
 # Fields that belong to the catalog card: locked while the item is linked to it.
@@ -94,12 +96,14 @@ class StockItemUpdateIn(BaseModel):
     # Always editable.
     sale_price: Decimal | None = PriceField
     sale_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    cut_price: Decimal | None = PriceField  # making the key
+    cut_currency: str | None = Field(default=None, min_length=3, max_length=3)
     min_quantity: int | None = Field(default=None, ge=0, le=1_000_000)
     notes: str | None = Field(default=None, max_length=5000)
     stale: bool | None = None
     public_visible: bool | None = None
 
-    _cur = field_validator("sale_currency")(_upper)
+    _cur = field_validator("sale_currency", "cut_currency")(_upper)
 
 
 class LevelOut(BaseModel):
@@ -128,6 +132,9 @@ class StockItemOut(BaseModel):
     levels: list[LevelOut]
     sale_price: Decimal | None
     sale_currency: str | None
+    cut_price: Decimal | None
+    cut_currency: str | None
+    cut_price_in_base: Decimal | None
     sale_price_in_base: Decimal | None  # converted with the workshop's rate
     catalog_item: ItemBriefOut | None
     notes: str | None
@@ -158,7 +165,7 @@ class CatalogLinkIn(BaseModel):
 
 class MovementIn(BaseModel):
     type: MovementType
-    quantity: int = Field(description="Positive; for 'adjust' may be negative (−1 = one tap minus)")
+    quantity: int = Field(description="Positive; for 'adjust' (undo, recount) may be negative")
     location_id: uuid.UUID | None = Field(
         default=None, description="Where from (out/transfer) or where to (in)"
     )

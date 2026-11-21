@@ -64,6 +64,8 @@ export default {
     inStock: 'En stock',
     priceAsk: 'Prix sur demande',
     priceFrom: 'à partir de {price}',
+    priceBlank: 'Ébauche',
+    priceCut: 'Reproduction',
     verified: 'Atelier vérifié',
     call: 'Appeler',
     route: 'Itinéraire',

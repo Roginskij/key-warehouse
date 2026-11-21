@@ -1230,9 +1230,9 @@ export interface paths {
         put?: never;
         /**
          * Create Movement
-         * @description One-tap +/−: {"type": "adjust", "quantity": 1} or -1.
-         *     Sale: {"type": "sale", "quantity": 1, "unit_price"?, "client_name"?} — price defaults
-         *     to the item's sale price.
+         * @description Sale / receipt / write-off / transfer. Sale: {"type": "sale", "quantity": 1,
+         *     "unit_price"?, "client_name"?} — price defaults to the item's sale price.
+         *     "adjust" (±) is the correction behind "Undo".
          */
         post: operations["create_movement_api_v1_workshops__workshop_id__inventory_items__item_id__movements_post"];
         delete?: never;
@@ -2914,7 +2914,7 @@ export interface components {
             type: components["schemas"]["MovementType"];
             /**
              * Quantity
-             * @description Positive; for 'adjust' may be negative (−1 = one tap minus)
+             * @description Positive; for 'adjust' (undo, recount) may be negative
              */
             quantity: number;
             /**
@@ -3405,6 +3405,7 @@ export interface components {
              */
             in_stock: boolean;
             price?: components["schemas"]["PublicPrice"] | null;
+            cut_price?: components["schemas"]["PublicPrice"] | null;
         };
         /** RateIn */
         RateIn: {
@@ -3570,6 +3571,10 @@ export interface components {
             sale_price?: number | string | null;
             /** Sale Currency */
             sale_currency?: string | null;
+            /** Cut Price */
+            cut_price?: number | string | null;
+            /** Cut Currency */
+            cut_currency?: string | null;
             /**
              * Min Quantity
              * @default 0
@@ -3638,6 +3643,12 @@ export interface components {
             sale_price: string | null;
             /** Sale Currency */
             sale_currency: string | null;
+            /** Cut Price */
+            cut_price: string | null;
+            /** Cut Currency */
+            cut_currency: string | null;
+            /** Cut Price In Base */
+            cut_price_in_base: string | null;
             /** Sale Price In Base */
             sale_price_in_base: string | null;
             catalog_item: components["schemas"]["ItemBriefOut"] | null;
@@ -3709,6 +3720,12 @@ export interface components {
             sale_price: string | null;
             /** Sale Currency */
             sale_currency: string | null;
+            /** Cut Price */
+            cut_price: string | null;
+            /** Cut Currency */
+            cut_currency: string | null;
+            /** Cut Price In Base */
+            cut_price_in_base: string | null;
             /** Sale Price In Base */
             sale_price_in_base: string | null;
             catalog_item: components["schemas"]["ItemBriefOut"] | null;
@@ -3765,6 +3782,10 @@ export interface components {
             sale_price?: number | string | null;
             /** Sale Currency */
             sale_currency?: string | null;
+            /** Cut Price */
+            cut_price?: number | string | null;
+            /** Cut Currency */
+            cut_currency?: string | null;
             /** Min Quantity */
             min_quantity?: number | null;
             /** Notes */

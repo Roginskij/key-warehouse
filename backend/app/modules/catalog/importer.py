@@ -102,6 +102,13 @@ def _read_csv(content: bytes) -> list[dict[str, str]]:
             continue
     else:
         raise AppError("catalog.import_bad_format", message="Unknown text encoding")
+    # The header line decides: Excel in Ukraine/EU saves CSV with ";", and rows often have
+    # fewer cells than the header, which confuses csv.Sniffer.
+    header = next((line for line in text.splitlines() if line.strip()), "")
+    counts = {d: header.count(d) for d in (";", "\t", ",")}
+    delimiter = max(counts, key=counts.get)
+    if counts[delimiter]:
+        return _rows_from_matrix(list(csv.reader(io.StringIO(text), delimiter=delimiter)))
     try:
         dialect = csv.Sniffer().sniff(text[:4096], delimiters=",;\t")
     except csv.Error:

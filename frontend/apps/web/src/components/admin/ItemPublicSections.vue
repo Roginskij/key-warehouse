@@ -13,8 +13,8 @@
     <form v-if="editable" class="grid grid-cols-2 gap-2 border-t border-ground pt-3 sm:grid-cols-[1fr_1fr_5rem_5rem_auto]" @submit.prevent="addVehicle">
       <input v-model="car.make" :placeholder="t('admin.fits.make')" :aria-label="t('admin.fits.make')" :class="input" />
       <input v-model="car.model" :placeholder="t('admin.fits.model')" :aria-label="t('admin.fits.model')" :class="input" />
-      <input v-model="car.year_from" :placeholder="t('admin.fits.from')" :aria-label="t('admin.fits.from')" inputmode="numeric" :class="input" />
-      <input v-model="car.year_to" :placeholder="t('admin.fits.to')" :aria-label="t('admin.fits.to')" inputmode="numeric" :class="input" />
+      <input :value="car.year_from" @input="onYear($event, 'year_from')" :placeholder="t('admin.fits.from')" :aria-label="t('admin.fits.from')" inputmode="numeric" :class="input" />
+      <input :value="car.year_to" @input="onYear($event, 'year_to')" :placeholder="t('admin.fits.to')" :aria-label="t('admin.fits.to')" inputmode="numeric" :class="input" />
       <UIButton type="submit" class="col-span-2 sm:col-span-1">{{ t('admin.item.add') }}</UIButton>
     </form>
   </section>
@@ -102,6 +102,12 @@ const year = (v: string) => (v.trim() ? Number(v.trim()) : null)
 const years = (a?: number | null, b?: number | null) => (a || b ? `${a ?? '…'}–${b ?? '…'}` : '')
 
 const car = ref({ make: '', model: '', year_from: '', year_to: '' })
+/** Years: digits only, at most 4. */
+function onYear(e: Event, field: 'year_from' | 'year_to') {
+  const el = e.target as HTMLInputElement
+  el.value = el.value.replace(/\D/g, '').slice(0, 4)
+  car.value[field] = el.value
+}
 async function addVehicle() {
   const c = car.value
   if (!c.make.trim() || !c.model.trim()) return

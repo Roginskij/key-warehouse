@@ -51,14 +51,9 @@
               {{ t('item.minimum', { n: item.min_quantity }) }}
             </span>
           </div>
-          <UIQty
-            :value="item.quantity"
-            size="lg"
-            :minus-label="t('stock.minusOne', { name: item.name })"
-            :plus-label="t('stock.plusOne', { name: item.name })"
-            @minus="step(-1)"
-            @plus="step(1)"
-          />
+          <span class="text-[32px] leading-none font-bold tabular-nums" :class="item.needs_reorder ? 'text-warn' : 'text-ink'">
+            {{ t('common.pcs', { n: item.quantity }) }}
+          </span>
         </div>
         <div class="grid grid-cols-3 gap-2">
           <UIButton variant="dark" :disabled="!item.quantity" @click="sheet = 'sale'">{{ t('move.short.sale') }}</UIButton>
@@ -80,6 +75,10 @@
           <div class="flex min-h-12 items-center justify-between gap-3">
             <dt class="text-muted">{{ t('item.salePrice') }}</dt>
             <dd class="m-0 text-[17px] font-bold">{{ money(item.sale_price, item.sale_currency) }}</dd>
+          </div>
+          <div v-if="item.cut_price" class="flex min-h-12 items-center justify-between gap-3">
+            <dt class="text-muted">{{ t('item.cutPrice') }}</dt>
+            <dd class="m-0 text-[17px] font-bold">{{ money(item.cut_price, item.cut_currency) }}</dd>
           </div>
           <div v-for="lv in item.levels" :key="lv.location_id" class="flex min-h-12 items-center justify-between gap-3">
             <dt class="text-muted">{{ places.get(lv.location_id) ?? '…' }}</dt>
@@ -119,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { buttonClass, UIButton, UIIcon, UIQty } from '@kv/ui'
+import { buttonClass, UIButton, UIIcon } from '@kv/ui'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -203,9 +202,6 @@ async function onPhoto(e: Event) {
 }
 
 const sheet = ref<MoveKind | null>(null)
-async function step(delta: 1 | -1) {
-  if (item.value) await moveWithUndo(item.value, { type: 'adjust', quantity: delta }, delta > 0 ? '+1' : '−1')
-}
 async function submitMove(body: MovementBody) {
   if (!item.value) return
   const kind = sheet.value!
