@@ -85,7 +85,6 @@ async def export_my_data(user: CurrentUser, session: SessionDep) -> Response:
                 "workshop": m.workshop.name,
                 "country": m.workshop.country_code,
                 "role": m.role,
-                "sees_purchase_prices": m.sees_purchase_prices,
                 "joined_at": _dt(m.created_at),
             }
             for m in memberships

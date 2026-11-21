@@ -241,7 +241,9 @@ async def test_export_my_data(client):
     inv = f"{API}/workshops/{wid}/inventory"
     item = (
         await client.post(
-            f"{inv}/items", json={"kind": "blank", "name": "HU66", "quantity": 2}, headers=h
+            f"{inv}/items",
+            json={"kind": "blank", "name": "HU66", "brand": "Silca", "code": "HU66", "quantity": 2},
+            headers=h,
         )
     ).json()
     await client.post(

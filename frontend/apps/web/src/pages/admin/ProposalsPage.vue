@@ -24,6 +24,17 @@
         </div>
         <span class="shrink-0 rounded-md bg-primary-soft px-2 py-0.5 text-[13px] font-bold">{{ t('admin.proposals.votes', { n: p.votes_count }) }}</span>
       </div>
+      <p v-if="p.stock_count" class="m-0 text-[14px] font-semibold">{{ t('admin.proposals.stockCount', { n: p.stock_count }) }}</p>
+      <div v-if="p.suggestions?.length && canModerate" class="flex flex-col gap-2">
+        <span class="text-[13px] font-semibold text-muted">{{ t('admin.proposals.similar') }}</span>
+        <div v-for="s in p.suggestions" :key="s.id" class="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2">
+          <RouterLink :to="{ name: 'admin-item', params: { id: s.id } }" class="min-w-0 text-[14px] text-ink">
+            <span class="font-semibold">{{ s.name }}</span>
+            <span class="text-muted"> · {{ s.codes.map(code).join(' · ') }}</span>
+          </RouterLink>
+          <UIButton size="sm" variant="outline" @click="accept(p, { attach_to: s.id })">{{ t('admin.proposals.attachHere') }}</UIButton>
+        </div>
+      </div>
       <p v-if="p.decision_note" class="m-0 text-[14px] text-muted">{{ p.decision_note }}</p>
       <div class="flex flex-wrap gap-2">
         <template v-if="p.status === 'pending' && canModerate">

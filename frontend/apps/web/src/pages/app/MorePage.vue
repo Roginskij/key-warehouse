@@ -2,10 +2,7 @@
   <PageHeader :title="t('more.title')" :subtitle="session.me?.user.email" />
   <div class="grid gap-3 p-3 md:max-w-3xl md:gap-4 md:p-0 md:pb-12 lg:max-w-none lg:grid-cols-2 lg:gap-5">
     <section class="flex flex-col gap-1 rounded-card border border-line bg-surface p-2 md:hidden">
-      <RouterLink v-if="session.seesPurchase" :to="{ name: 'value' }" class="flex min-h-13 items-center gap-3 rounded-[10px] px-3 text-[16px] font-semibold text-ink no-underline hover:bg-ground">
-        <UIIcon name="coins" :size="22" />{{ t('nav.value') }}<UIIcon name="chevron" :size="20" class="ml-auto text-faint" />
-      </RouterLink>
-      <RouterLink :to="{ name: 'import' }" class="flex min-h-13 items-center gap-3 rounded-[10px] px-3 text-[16px] font-semibold text-ink no-underline hover:bg-ground">
+      <RouterLink v-if="session.workshops.length" :to="{ name: 'import' }" class="flex min-h-13 items-center gap-3 rounded-[10px] px-3 text-[16px] font-semibold text-ink no-underline hover:bg-ground">
         <UIIcon name="upload" :size="22" />{{ t('nav.import') }}<UIIcon name="chevron" :size="20" class="ml-auto text-faint" />
       </RouterLink>
       <RouterLink v-if="session.isAdmin" :to="{ name: 'admin' }" class="flex min-h-13 items-center gap-3 rounded-[10px] px-3 text-[16px] font-semibold text-ink no-underline hover:bg-ground">
@@ -32,7 +29,8 @@
       </div>
     </section>
 
-    <section class="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
+    <!-- KeyVerhaus staff have no workshop and do not create one here -->
+    <section v-if="session.workshops.length || !session.isAdmin" class="flex flex-col gap-3 rounded-card border border-line bg-surface p-4">
       <h2 class="m-0 text-[17px] font-bold">{{ t('more.workshop') }}</h2>
       <UISelect v-if="session.workshops.length > 1" v-model="currentWorkshop" :label="t('more.current')" :options="workshopOptions" />
       <p v-if="!session.wid" class="m-0 text-muted">{{ t('noWorkshop.text') }}</p>

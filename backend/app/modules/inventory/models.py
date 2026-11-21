@@ -81,8 +81,12 @@ class InventoryItem(UUIDPk, Timestamps, Base):
     )
 
     kind: Mapped[str] = mapped_column(String(16))
+    # "Назва": what the workshop calls it ("ключ гольф"). Defaults to the catalog name (or
+    # brand + number). Linked items show the catalog name first and this one under it.
     name: Mapped[str] = mapped_column(String(200))
-    # The workshop's own number / brand, as written on their shelf.
+    # Not in the catalog yet: "pending" (proposal waits for the admin) or "rejected".
+    catalog_review: Mapped[str | None] = mapped_column(String(16))
+    # Brand from the catalog's brand list + the number, as on the workshop's shelf.
     brand: Mapped[str | None] = mapped_column(String(80))
     code: Mapped[str | None] = mapped_column(String(64))
     code_normalized: Mapped[str | None] = mapped_column(String(64), index=True)
@@ -91,9 +95,10 @@ class InventoryItem(UUIDPk, Timestamps, Base):
     frequency_mhz: Mapped[Decimal | None] = mapped_column(Numeric(7, 3))
     chip_type: Mapped[str | None] = mapped_column(String(64))
     fcc_id: Mapped[str | None] = mapped_column(String(32))
+    # Characteristics of an item not in the catalog yet (they go to review with it).
+    # Linked items use the card's characteristics.
+    attributes: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
 
-    purchase_price: Mapped[Decimal | None] = mapped_column(Money)
-    purchase_currency: Mapped[str | None] = mapped_column(ForeignKey("currencies.code"))
     sale_price: Mapped[Decimal | None] = mapped_column(Money)
     sale_currency: Mapped[str | None] = mapped_column(ForeignKey("currencies.code"))
 
@@ -148,7 +153,7 @@ class StockMovement(UUIDPk, Base):
     to_location_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("inventory_locations.id", ondelete="SET NULL")
     )
-    # Price of one piece: purchase price for receipts, sale price for sales.
+    # Price of one piece, for sales.
     unit_price: Mapped[Decimal | None] = mapped_column(Money)
     currency: Mapped[str | None] = mapped_column(ForeignKey("currencies.code"))
     # Stage 4 (receipts / orders) builds on these.

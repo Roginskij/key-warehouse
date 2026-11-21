@@ -76,10 +76,9 @@ workshop_name, accept_terms. After success show "check your e-mail".
 
 ## Workshops and roles
 
-- `GET /users/me` returns the user and all their workshops with `role` and
-  `sees_purchase_prices`. One user can belong to several workshops → workshop switcher.
-- Roles: `owner`, `master`. Hide purchase prices in UI when `sees_purchase_prices` is false
-  (the backend will also strip them in the inventory API).
+- `GET /users/me` returns the user and all their workshops with `role`.
+  One user can belong to several workshops → workshop switcher.
+- Roles: `owner`, `master`.
 - Admin panel: show only if `user.is_superadmin` or `user.permissions` not empty;
   show sections by permission (`users.view`, `users.manage`, `catalog.*`).
 
@@ -141,14 +140,12 @@ Main screens and their endpoints:
 | History | `GET movements?item_id=&type=&user_id=&date_from=&date_to=` (journal) and `GET audit?item_id=` (edits of prices/names) |
 | Storage locations | `GET/POST locations`, `PATCH/DELETE locations/{id}`; flat list with `parent_id` → build the tree; `is_default` location: show a translated "Main" label |
 | Time to order | `GET reorder` |
-| Stock value | `GET value` (only if `sees_purchase_prices`) |
 | Currency rates | `GET rates`, `PUT rates/{USD} {"rate": "41.5"}` (owner) — `sale_price_in_base` on items uses them |
 | Excel import | (owner) `POST import/analyze` (file) → show `headers`, `sample`, preselect `suggested_mapping`; user fixes mapping → `POST import` (file, `mapping` JSON string, `default_kind`, `currency`, `location_id`, `dry_run=true`) → show report → same with `dry_run=false` |
 | Excel export | `GET export` → .xlsx file |
 | Catalog link | created items return `catalog`: `linked` / `proposed` / `none`; `GET items/{id}/catalog-suggestions`, `PUT items/{id}/catalog-link {catalog_item_id \| null}` |
 
 Rules to reflect in UI:
-- `purchase_price_hidden: true` → hide purchase price fields, value screen and purchase-price inputs.
 - Out-of-stock errors: `inventory.insufficient_stock` (`params.available`),
   `inventory.location_required` (stock split — ask which location).
 - Import report rows are the row numbers of the user's file.
@@ -157,7 +154,7 @@ Inventory error codes: `inventory.item_not_found`, `inventory.location_not_found
 `inventory.duplicate` (params.item_id — offer to open it), `inventory.insufficient_stock`,
 `inventory.location_required`, `inventory.bad_quantity`, `inventory.bad_transfer`,
 `inventory.bad_movement_type`, `inventory.item_archived`, `inventory.item_has_stock`,
-`inventory.purchase_prices_hidden`, `inventory.location_is_default`,
+`inventory.location_is_default`,
 `inventory.location_has_children`, `inventory.location_not_empty`, `inventory.location_cycle`,
 `inventory.rate_for_base`, `inventory.photo_too_big`, `inventory.photo_bad_format`,
 `inventory.photo_not_found`, `inventory.import_too_big`, `inventory.import_bad_mapping`,

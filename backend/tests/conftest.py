@@ -19,6 +19,7 @@ from sqlalchemy import text  # noqa: E402
 from app.core import email as email_module  # noqa: E402
 from app.core.db import Base, engine  # noqa: E402
 from app.main import app  # noqa: E402
+from app.modules.catalog.attribute_seed import seed as seed_attributes  # noqa: E402
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 REFERENCE_TABLES = {"currencies", "trade_zones", "countries"}
@@ -55,6 +56,8 @@ async def clean_tables(migrated_db):
                 "FROM unnest(ARRAY['Silca','JMA','Keyline','Errebi','Ilco','OEM']) AS n"
             )
         )
+        # So is the first characteristics list.
+        await conn.run_sync(seed_attributes)
     outbox().clear()
 
 

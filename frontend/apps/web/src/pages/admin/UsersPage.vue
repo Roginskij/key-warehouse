@@ -16,6 +16,21 @@
   </PageHeader>
 
   <div class="flex flex-col gap-2 p-3 md:p-0 md:pb-12">
+    <!-- Staff: invited here, get admin rights and no workshop -->
+    <section v-if="session.isSuperadmin" class="mb-2 flex flex-col gap-2 rounded-card border border-line bg-surface p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="flex flex-col">
+          <b class="text-[16px]">{{ t('admin.staff.title') }}</b>
+          <span class="text-[14px] text-muted">{{ t('admin.staff.hint') }}</span>
+        </span>
+        <UIButton @click="inviteOpen = true"><UIIcon name="plus" :size="18" />{{ t('admin.staff.invite') }}</UIButton>
+      </div>
+      <div v-for="i in staffInvites.data.value" :key="i.id" class="flex items-center justify-between gap-2 border-t border-ground pt-2 text-[15px]">
+        <span class="min-w-0 truncate">{{ i.email }} <span class="text-muted">· {{ t('admin.staff.pending') }} · {{ dateTime(i.created_at) }}</span></span>
+        <UIButton size="sm" variant="ghost" @click="revokeStaff(i.id)">{{ t('team.revoke') }}</UIButton>
+      </div>
+    </section>
+
     <LoadError v-if="users.isError.value && !users.data.value" :error="users.error.value" @retry="users.refetch()" />
     <div v-else-if="users.isPending.value" class="h-40 animate-pulse rounded-card bg-surface" />
     <UIEmpty v-else-if="users.data.value && !users.data.value.items.length" icon="users" :title="t('admin.users.none')" />
@@ -43,6 +58,21 @@
     </article>
   </div>
 
+  <Sheet :open="inviteOpen" :title="t('admin.staff.invite')" :close-label="t('common.close')" @close="inviteOpen = false">
+    <form class="flex flex-col gap-3" novalidate @submit.prevent="inviteStaff">
+      <UIField v-model="staffEmail" :label="t('auth.email')" type="email" inputmode="email" autocomplete="off" />
+      <p class="m-0 text-[14px] text-muted">{{ t('admin.staff.emailHint') }}</p>
+      <label v-for="p in PERMS" :key="p" class="flex items-start gap-3 rounded-control border border-line p-3">
+        <input v-model="staffPerms" type="checkbox" :value="p" class="mt-0.5 size-5 shrink-0 accent-ink" />
+        <span class="flex flex-col">
+          <span class="font-semibold">{{ t(`admin.perms.${p.replace('.', '_')}`) }}</span>
+          <span class="text-[14px] text-muted">{{ t(`admin.permsHint.${p.replace('.', '_')}`) }}</span>
+        </span>
+      </label>
+      <UIButton type="submit" size="lg" block :disabled="!staffEmail.trim() || !staffPerms.length">{{ t('admin.staff.send') }}</UIButton>
+    </form>
+  </Sheet>
+
   <Sheet :open="!!purging" :title="t('admin.users.purge')" :close-label="t('common.close')" @close="purging = null">
     <p class="m-0">{{ t('admin.users.purgeWarning', { name: purging?.full_name ?? '', email: purging?.email ?? '' }) }}</p>
     <UIButton variant="danger" size="lg" block @click="purge">{{ t('admin.users.purgeButton') }}</UIButton>
@@ -64,13 +94,14 @@
 
 <script setup lang="ts">
 import type { Schemas } from '@kv/api'
-import { UIButton, UIEmpty, UIIcon } from '@kv/ui'
+import { UIButton, UIEmpty, UIField, UIIcon } from '@kv/ui'
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import LoadError from '@/components/LoadError.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import Sheet from '@/components/Sheet.vue'
+import { PERMS } from '@/lib/admin'
 import { call, client } from '@/lib/api'
 import { errorText } from '@/lib/errors'
 import { dateTime } from '@/lib/format'
@@ -99,7 +130,6 @@ const users = useQuery({
     call(client.GET('/api/v1/admin/users', { params: { query: { q: q.value || undefined, admins_only: adminsOnly.value, status: status.value || undefined, limit: 100 } } })),
   placeholderData: keepPreviousData,
 })
-const PERMS = ['users.view', 'users.manage', 'catalog.view', 'catalog.edit', 'catalog.moderate', 'catalog.import']
 
 async function setActive(u: U, active: boolean) {
   try {
@@ -152,6 +182,39 @@ async function saveRights() {
     editing.value = null
     qc.invalidateQueries({ queryKey: ['admin-users'] })
     toast.show(t('admin.users.rightsSaved'))
+  } catch (e) {
+    toast.error(errorText(e))
+  }
+}
+
+// --- staff invitations (superadmin)
+const staffInvites = useQuery({
+  queryKey: ['staff-invites'],
+  queryFn: () => call(client.GET('/api/v1/admin/staff-invitations')),
+  enabled: computed(() => session.isSuperadmin),
+})
+const inviteOpen = ref(false)
+const staffEmail = ref('')
+const staffPerms = ref<string[]>(['catalog.view', 'catalog.edit', 'catalog.moderate'])
+async function inviteStaff() {
+  try {
+    await call(
+      client.POST('/api/v1/admin/staff-invitations', {
+        body: { email: staffEmail.value.trim(), permissions: staffPerms.value as Schemas['AdminPerm'][] },
+      }),
+    )
+    toast.show(t('team.sent', { email: staffEmail.value.trim() }))
+    inviteOpen.value = false
+    staffEmail.value = ''
+    qc.invalidateQueries({ queryKey: ['staff-invites'] })
+  } catch (e) {
+    toast.error(errorText(e))
+  }
+}
+async function revokeStaff(id: string) {
+  try {
+    await call(client.DELETE('/api/v1/admin/staff-invitations/{invitation_id}', { params: { path: { invitation_id: id } } }))
+    qc.invalidateQueries({ queryKey: ['staff-invites'] })
   } catch (e) {
     toast.error(errorText(e))
   }

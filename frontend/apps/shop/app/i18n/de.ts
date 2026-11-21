@@ -87,6 +87,12 @@ export default {
     text: 'Der Schlüssel wurde vielleicht umbenannt oder mit einem anderen zusammengeführt.',
     home: 'Startseite',
   },
+  attrs: {
+    title: 'Eigenschaften',
+    yes: 'ja',
+    no: 'nein',
+    bad: 'Ungültiger Wert',
+  },
   kinds: {
     blank: 'Schlüsselrohling',
     car_key: 'Autoschlüssel',

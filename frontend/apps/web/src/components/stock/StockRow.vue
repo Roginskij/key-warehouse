@@ -7,7 +7,12 @@
         :to="{ name: 'item', params: { id: item.id } }"
         class="truncate text-[16px] leading-snug font-semibold text-ink no-underline hover:underline"
       >{{ item.name }}</RouterLink>
+      <span v-if="item.my_name" class="truncate text-[14px] text-ink">{{ item.my_name }}</span>
       <span class="truncate text-[14px] text-muted lg:hidden">{{ [code, place].filter(Boolean).join(' · ') }}</span>
+      <span
+        v-if="item.catalog_status === 'pending'"
+        class="self-start rounded-md bg-primary-soft px-2 py-px text-xs font-semibold"
+      >{{ t('item.review.short') }}</span>
       <span
         v-if="item.needs_reorder"
         class="self-start rounded-md bg-warn-bg px-2 py-px text-xs font-semibold text-warn"

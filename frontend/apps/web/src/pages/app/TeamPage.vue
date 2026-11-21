@@ -20,10 +20,6 @@
               @click="removeMember(m.membership_id)"
             ><UIIcon name="trash" :size="18" /></button>
           </div>
-          <label v-if="m.role === 'master'" class="flex items-center gap-3 text-[15px]">
-            <input type="checkbox" class="size-5 accent-ink" :checked="m.can_see_purchase_prices" @change="togglePrices(m.membership_id, ($event.target as HTMLInputElement).checked)" />
-            {{ t('team.seesPrices') }}
-          </label>
         </div>
       </section>
 
@@ -32,9 +28,6 @@
         <form class="flex flex-col gap-4" novalidate @submit.prevent="invite">
           <UIField v-model="form.email" :label="t('auth.email')" type="email" inputmode="email" autocomplete="off" :error="errors.email" />
           <UISelect v-model="form.role" :label="t('team.role')" :options="roleOptions" />
-          <label v-if="form.role === 'master'" class="flex items-center gap-3 text-[15px]">
-            <input v-model="form.can_see_purchase_prices" type="checkbox" class="size-5 accent-ink" />{{ t('team.seesPrices') }}
-          </label>
           <UIButton type="submit" size="lg" block :loading="busy">{{ t('team.send') }}</UIButton>
         </form>
         <div v-if="pending.length" class="flex flex-col gap-2 pt-2">
@@ -80,7 +73,7 @@ const invites = useQuery({
 })
 const pending = computed(() => (invites.data.value ?? []).filter((i) => !i.accepted_at && !i.revoked_at))
 
-const form = ref({ email: '', role: 'master' as 'master' | 'owner', can_see_purchase_prices: false })
+const form = ref({ email: '', role: 'master' as 'master' | 'owner' })
 const errors = ref<Record<string, string>>({})
 const busy = ref(false)
 const roleOptions = computed(() => [
@@ -101,18 +94,6 @@ async function invite() {
     if (!Object.keys(errors.value).length) toast.error(errorText(e))
   } finally {
     busy.value = false
-  }
-}
-
-async function togglePrices(membershipId: string, value: boolean) {
-  try {
-    await call(client.PATCH('/api/v1/workshops/{workshop_id}/members/{membership_id}', {
-      params: { path: { ...path.value, membership_id: membershipId } },
-      body: { can_see_purchase_prices: value },
-    }))
-    qc.invalidateQueries({ queryKey: ['members', session.wid] })
-  } catch (e) {
-    toast.error(errorText(e))
   }
 }
 

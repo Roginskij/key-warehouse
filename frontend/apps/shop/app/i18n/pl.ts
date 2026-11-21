@@ -87,6 +87,12 @@ export default {
     text: 'Klucz mógł zmienić nazwę lub zostać połączony z innym.',
     home: 'Strona główna',
   },
+  attrs: {
+    title: 'Cechy',
+    yes: 'tak',
+    no: 'nie',
+    bad: 'Nieprawidłowa wartość',
+  },
   kinds: {
     blank: 'Półfabrykat klucza',
     car_key: 'Kluczyk samochodowy',

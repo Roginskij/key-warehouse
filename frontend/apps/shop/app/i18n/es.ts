@@ -87,6 +87,12 @@ export default {
     text: 'Puede que la llave se haya renombrado o unido a otra.',
     home: 'Inicio',
   },
+  attrs: {
+    title: 'Características',
+    yes: 'sí',
+    no: 'no',
+    bad: 'Valor incorrecto',
+  },
   kinds: {
     blank: 'Llave en bruto',
     car_key: 'Llave de coche',

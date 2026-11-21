@@ -22,7 +22,7 @@ async def test_workshop_defaults_from_country(client):
     w = r.json()[0]
     assert (w["country_code"], w["base_currency"], w["trade_zone"]) == ("PL", "PLN", "EU")
     assert w["sharing_level"] == "none"
-    assert w["my_role"] == "owner" and w["sees_purchase_prices"] is True
+    assert w["my_role"] == "owner"
 
 
 async def test_owner_can_create_second_workshop_and_change_currency(client):
@@ -71,7 +71,6 @@ async def test_invite_new_master_creates_account(client):
     me = (await client.get(f"{API}/users/me", headers=auth(master))).json()
     assert me["user"]["email_verified"] is True
     assert me["workshops"][0]["role"] == "master"
-    assert me["workshops"][0]["sees_purchase_prices"] is False
 
     # Master cannot manage the workshop.
     r = await client.post(
@@ -121,13 +120,6 @@ async def test_member_permissions_and_last_owner_rules(client):
     members = (await client.get(f"{API}/workshops/{wid}/members", headers=auth(owner))).json()
     owner_m = next(m for m in members if m["role"] == "owner")
     master_m = next(m for m in members if m["role"] == "master")
-
-    r = await client.patch(
-        f"{API}/workshops/{wid}/members/{master_m['membership_id']}",
-        json={"can_see_purchase_prices": True},
-        headers=auth(owner),
-    )
-    assert r.json()["can_see_purchase_prices"] is True
 
     # The only owner cannot demote themself or leave.
     r = await client.patch(

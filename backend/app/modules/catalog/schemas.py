@@ -196,12 +196,18 @@ class ProposalOut(BaseModel):
     result_item_id: uuid.UUID | None
 
 
+class ProposalAdminOut(ProposalOut):
+    suggestions: list[ItemBriefOut] = []  # existing cards this may be (new_item only)
+    stock_count: int = 0  # unlinked workshop stock that would get linked (new_item only)
+
+
 class ProposalPage(BaseModel):
-    items: list[ProposalOut]
+    items: list[ProposalAdminOut]
     total: int
 
 
 class ProposalAcceptIn(BaseModel):
+    attach_to: uuid.UUID | None = None  # new_item: add the numbers to this card
     kind: ItemKind | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
 

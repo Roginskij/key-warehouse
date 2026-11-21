@@ -380,3 +380,73 @@ async def test_import_xlsx(client, admin):
     wb.save(buf)
     r = await _import(client, admin, buf.getvalue(), dry_run=False, filename="cat.xlsx")
     assert r.json()["created_items"] == 1
+
+
+async def test_new_item_proposal_can_attach_to_existing_card(client, admin):
+    u, w = await _workshop(client, "att@example.com")
+    card = await _item(client, admin, "VW HU66", Silca="HU66")
+    # Workshop's odd name + a different brand's number: nothing to link by yet.
+    r = await client.post(
+        f"{API}/workshops/{w}/inventory/items",
+        json={"kind": "blank", "name": "ключ фольц старый", "brand": "JMA", "code": "VW-14"},
+        headers=u,
+    )
+    assert r.status_code == 201, r.text
+    stock_id = r.json()["id"]
+
+    queue = (await client.get(f"{ADMIN}/proposals", headers=admin)).json()
+    assert queue["total"] == 1
+    p = queue["items"][0]
+    assert p["stock_count"] == 1
+
+    r = await client.post(
+        f"{ADMIN}/proposals/{p['id']}/accept", json={"attach_to": card["id"]}, headers=admin
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == card["id"]
+    assert {c["code"] for c in r.json()["codes"]} >= {"HU66", "VW-14"}
+
+    # The stock item got linked to the card by the new number.
+    item = (await client.get(f"{API}/workshops/{w}/inventory/items/{stock_id}", headers=u)).json()
+    assert item["catalog_item"]["id"] == card["id"]
+
+
+async def test_characteristics_follow_the_list_of_the_kind(client, admin):
+    spec = (await client.get(f"{API}/catalog/attributes", headers=admin)).json()
+    assert [f["key"] for f in spec["car_key"]][:2] == ["buttons", "blade"]
+    assert spec["machine"] == []
+
+    r = await client.post(
+        f"{ADMIN}/items",
+        json={
+            "kind": "car_key",
+            "name": "VW 3 кн",
+            "codes": [{"brand": "Silca", "code": "HU66AT"}],
+            # unknown field and empty value are dropped
+            "attributes": {
+                "buttons": "3",
+                "blade": "flip",
+                "keyless": False,
+                "color": "red",
+                "battery": "",
+            },
+        },
+        headers=admin,
+    )
+    assert r.status_code == 201, r.text
+    item = r.json()
+    assert item["attributes"] == {"buttons": 3, "blade": "flip", "keyless": False}
+
+    r = await client.patch(
+        f"{ADMIN}/items/{item['id']}", json={"attributes": {"blade": "spoon"}}, headers=admin
+    )
+    assert r.json()["error"]["code"] == "catalog.bad_attribute"
+    assert r.json()["error"]["params"]["field"] == "blade"
+    r = await client.patch(
+        f"{ADMIN}/items/{item['id']}", json={"attributes": {"buttons": 9}}, headers=admin
+    )
+    assert r.json()["error"]["code"] == "catalog.bad_attribute"
+
+    # Another kind keeps only its own fields.
+    r = await client.patch(f"{ADMIN}/items/{item['id']}", json={"kind": "remote"}, headers=admin)
+    assert r.json()["attributes"] == {"buttons": 3, "keyless": False}

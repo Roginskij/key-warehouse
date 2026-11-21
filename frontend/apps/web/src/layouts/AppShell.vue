@@ -83,17 +83,25 @@ const session = useSession()
 const { data: reorder } = useReorder()
 const lowCount = computed(() => reorder.value?.total ?? 0)
 
-const tabs = computed(() => [
+// Staff without a workshop reach this shell only for their account settings.
+const staffOnly = computed(() => session.isAdmin && !session.workshops.length)
+interface NavItem { name: string; icon: string; label: string; match: string[]; badge?: number }
+const staffNav = computed<NavItem[]>(() => [
+  { name: 'admin', icon: 'key', label: t('nav.admin'), match: [] },
+  { name: 'more', icon: 'settings', label: t('nav.settings'), match: ['more'] },
+])
+const tabs = computed<NavItem[]>(() => (staffOnly.value ? staffNav.value : appTabs.value))
+const appTabs = computed(() => [
   { name: 'stock', icon: 'box', label: t('nav.stock'), match: ['stock', 'item', 'item-new', 'item-edit'] },
   { name: 'reorder', icon: 'list', label: t('nav.reorder'), match: ['reorder'], badge: lowCount.value },
   { name: 'locations', icon: 'pin', label: t('nav.locations'), match: ['locations'] },
-  { name: 'more', icon: 'more', label: t('nav.more'), match: ['more', 'import', 'team', 'value', 'public-profile'] },
+  { name: 'more', icon: 'more', label: t('nav.more'), match: ['more', 'import', 'team', 'public-profile'] },
 ])
-const side = computed(() => [
-  tabs.value[0],
-  tabs.value[1],
-  tabs.value[2],
-  ...(session.seesPurchase ? [{ name: 'value', icon: 'coins', label: t('nav.value'), match: ['value'] }] : []),
+const side = computed<NavItem[]>(() => (staffOnly.value ? staffNav.value : appSide.value))
+const appSide = computed(() => [
+  appTabs.value[0],
+  appTabs.value[1],
+  appTabs.value[2],
   { name: 'import', icon: 'upload', label: t('nav.import'), match: ['import'] },
   ...(session.isOwner ? [{ name: 'team', icon: 'users', label: t('nav.team'), match: ['team'] }] : []),
   ...(session.isOwner ? [{ name: 'public-profile', icon: 'globe', label: t('nav.publicProfile'), match: ['public-profile'] }] : []),

@@ -236,6 +236,24 @@ class CatalogAudit(UUIDPk, Base):
     )
 
 
+class DuplicateDismissal(Base):
+    """An admin said "these two look alike but are different keys" — stop suggesting them.
+    The pair is stored with item_a_id < item_b_id."""
+
+    __tablename__ = "catalog_duplicate_dismissals"
+
+    item_a_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("catalog_items.id", ondelete="CASCADE"), primary_key=True
+    )
+    item_b_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("catalog_items.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 # --- vehicles (stage 2: tables only for now) ---------------------------------------------
 
 
@@ -330,3 +348,55 @@ class CatalogImage(UUIDPk, Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+# --- characteristics: fields per kind, managed in the admin --------------------------
+
+
+class AttributeType(StrEnum):
+    SELECT = "select"
+    NUMBER = "number"
+    BOOL = "bool"
+
+
+class AttributeDef(UUIDPk, Base):
+    """One characteristics field of a kind ("Кнопок" for car keys). `key` never changes —
+    card values are stored under it, so labels can be renamed freely."""
+
+    __tablename__ = "catalog_attribute_defs"
+    __table_args__ = (UniqueConstraint("kind", "key"),)
+
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    key: Mapped[str] = mapped_column(String(40))
+    type: Mapped[str] = mapped_column(String(8))
+    labels: Mapped[dict[str, str]] = mapped_column(JSONB, default=dict)  # {"uk": "...", "en": ...}
+    min_value: Mapped[int | None] = mapped_column(Integer)
+    max_value: Mapped[int | None] = mapped_column(Integer)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    # Hidden: not asked or shown any more; values already in cards are kept.
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    options: Mapped[list["AttributeOption"]] = relationship(
+        lazy="selectin",
+        order_by="AttributeOption.sort_order",
+        cascade="all, delete-orphan",
+        back_populates="attribute",
+    )
+
+
+class AttributeOption(UUIDPk, Base):
+    """A value of a select field ("викидне"). `key` is what cards store."""
+
+    __tablename__ = "catalog_attribute_options"
+    __table_args__ = (UniqueConstraint("attribute_id", "key"),)
+
+    attribute_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("catalog_attribute_defs.id", ondelete="CASCADE"), index=True
+    )
+    key: Mapped[str] = mapped_column(String(40))
+    labels: Mapped[dict[str, str]] = mapped_column(JSONB, default=dict)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+
+    attribute: Mapped[AttributeDef] = relationship(back_populates="options")

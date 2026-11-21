@@ -3,7 +3,7 @@
 Only data that is meant to be public leaves here:
 - catalog items that have real content (description or car/lock fits);
 - workshops that switched on "show me in search" (public_listed);
-- "in stock" only for items the workshop marked public_visible. Purchase prices never.
+- "in stock" only for items the workshop marked public_visible; quantity never.
 """
 
 import uuid
@@ -21,7 +21,7 @@ from app.core.errors import AppError, NotFound
 from app.core.i18n import normalize_locale
 from app.core.security import utcnow
 from app.modules.admin.permissions import AdminPerm
-from app.modules.catalog import fits
+from app.modules.catalog import attributes, fits
 from app.modules.catalog.images import image_path
 from app.modules.catalog.models import (
     CatalogImage,
@@ -81,6 +81,7 @@ class PublicKey(PublicKeyBrief):
     description: str | None
     frequency_mhz: str | None
     chip_type: str | None
+    characteristics: list[dict]
     vehicles: list[dict]
     locks: list[dict]
     images: list[PublicImage]
@@ -220,6 +221,8 @@ async def get_key(slug: str, session: SessionDep):
         description=item.description,
         frequency_mhz=str(item.frequency_mhz) if item.frequency_mhz is not None else None,
         chip_type=item.chip_type,
+        # Visible fields with a value, in the admin's order, labels in all languages.
+        characteristics=await attributes.readable(session, item.kind, item.attributes),
         vehicles=[
             {k: v for k, v in f.items() if k not in ("id", "note")}
             for f in await fits.vehicle_fits(session, item.id)

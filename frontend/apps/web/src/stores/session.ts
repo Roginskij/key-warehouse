@@ -20,7 +20,6 @@ export const useSession = defineStore('session', () => {
   )
   const wid = computed(() => workshop.value?.workshop_id ?? '')
   const isOwner = computed(() => workshop.value?.role === 'owner')
-  const seesPurchase = computed(() => !!workshop.value?.sees_purchase_prices)
   const isAdmin = computed(() => !!me.value && (me.value.user.is_superadmin || me.value.user.permissions.length > 0))
   const isSuperadmin = computed(() => !!me.value?.user.is_superadmin)
   /** Admin-panel right check: superadmin has all of them. */
@@ -79,7 +78,7 @@ export const useSession = defineStore('session', () => {
   }
 
   return {
-    me, loaded, isLoggedIn, workshops, workshop, wid, isOwner, seesPurchase, isAdmin, isSuperadmin, can,
+    me, loaded, isLoggedIn, workshops, workshop, wid, isOwner, isAdmin, isSuperadmin, can,
     load, login, signInWith, logout, selectWorkshop, updateMe,
   }
 })

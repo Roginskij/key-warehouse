@@ -7,19 +7,20 @@ refer to keys by (brand, code) because that's what they see on their shelves.
 
 import uuid
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, Conflict
 from app.core.security import utcnow
-from app.modules.catalog import service
+from app.modules.catalog import attributes, service
 from app.modules.catalog.models import (
     CatalogItem,
     CatalogProposal,
+    ItemCode,
     ItemKind,
     ItemStatus,
     ProposalStatus,
@@ -28,6 +29,7 @@ from app.modules.catalog.models import (
     SourceType,
 )
 from app.modules.catalog.normalize import normalize_brand, normalize_code
+from app.modules.inventory.models import InventoryItem
 from app.modules.users.models import User
 
 
@@ -47,6 +49,7 @@ class NewItemProposal(BaseModel):
     frequency_mhz: Decimal | None = Field(default=None, ge=0, le=9999)
     chip_type: str | None = Field(default=None, max_length=64)
     fcc_id: str | None = Field(default=None, max_length=32)
+    attributes: dict[str, Any] = Field(default_factory=dict)
 
     def dedup_key(self) -> str:
         return "new_item:" + "|".join(sorted({c.key() for c in self.codes}))
@@ -170,9 +173,11 @@ async def accept(
     proposal: CatalogProposal,
     kind: ItemKind | None = None,
     name: str | None = None,
+    attach_to: uuid.UUID | None = None,
 ) -> CatalogItem:
     """Applies the proposal. Unknown brands are created. `kind` / `name` let the
-    moderator correct a new item before it appears in the catalog."""
+    moderator correct a new item before it appears in the catalog. `attach_to`
+    (new_item only): the numbers go to that existing card instead of a new one."""
     if proposal.status != ProposalStatus.PENDING:
         raise Conflict("catalog.proposal_decided", "Proposal is already decided")
     body = parse_payload(proposal)
@@ -183,6 +188,15 @@ async def accept(
         return await service.get_brand(session, ref.brand, create=True, actor=actor)
 
     match body:
+        case NewItemProposal() if attach_to is not None:
+            result = await service.resolve_item(session, attach_to)
+            if result.status != ItemStatus.ACTIVE:
+                raise AppError("catalog.item_not_active", message="Item is not active")
+            for c in body.codes:
+                await service.add_code(
+                    session, actor, result, await brand(c), c.code, source, votes
+                )
+
         case NewItemProposal():
             existing = {i.id: i for c in body.codes if (i := await _item_by_ref(session, c))}
             if len(existing) > 1:
@@ -208,6 +222,7 @@ async def accept(
                     frequency_mhz=body.frequency_mhz,
                     chip_type=body.chip_type,
                     fcc_id=body.fcc_id,
+                    attributes=await attributes.clean(session, kind or body.kind, body.attributes),
                 )
 
         case EquivalentProposal():
@@ -273,5 +288,61 @@ async def reject(
     proposal.decided_by_id = actor.id
     proposal.decided_at = utcnow()
     proposal.decision_note = note
+    if proposal.type == "new_item":
+        # Workshops' items waiting for this card are told it was not accepted.
+        body = parse_payload(proposal)
+        for ref in body.codes:
+            stock = (
+                await session.scalars(
+                    select(InventoryItem).where(
+                        InventoryItem.catalog_item_id.is_(None),
+                        InventoryItem.catalog_review == "pending",
+                        InventoryItem.code_normalized == normalize_code(ref.code),
+                    )
+                )
+            ).all()
+            for it in stock:
+                if it.brand and normalize_brand(it.brand) == normalize_brand(ref.brand):
+                    it.catalog_review = "rejected"
     service.audit(session, actor, "proposal.reject", "proposal", proposal.id, note=note)
     await session.flush()
+
+
+# --- moderator helpers -----------------------------------------------------------------
+
+
+async def suggestions(session: AsyncSession, body: NewItemProposal, limit: int = 5):
+    """Existing cards this new item may really be: a similar number, or the same words."""
+    conds = []
+    for c in body.codes:
+        norm = normalize_code(c.code)
+        if len(norm) >= 3:
+            conds.append(
+                CatalogItem.id.in_(
+                    select(ItemCode.item_id).where(ItemCode.code_normalized.contains(norm))
+                )
+            )
+    words = [w for w in body.name.split() if len(w) >= 3][:3]
+    if words:
+        conds.append(and_(*[CatalogItem.name.ilike(f"%{w}%") for w in words]))
+    if not conds:
+        return []
+    rows = await session.scalars(
+        select(CatalogItem)
+        .where(CatalogItem.status == ItemStatus.ACTIVE, or_(*conds))
+        .order_by(CatalogItem.name)
+        .limit(limit)
+    )
+    return rows.all()
+
+
+async def stock_count(session: AsyncSession, body: NewItemProposal) -> int:
+    """How many unlinked stock items would get linked once these numbers are accepted."""
+    norms = {normalize_code(c.code) for c in body.codes}
+    return await session.scalar(
+        select(func.count()).where(
+            InventoryItem.catalog_item_id.is_(None),
+            InventoryItem.is_archived.is_(False),
+            InventoryItem.code_normalized.in_(norms),
+        )
+    )

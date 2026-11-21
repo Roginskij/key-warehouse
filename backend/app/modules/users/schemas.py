@@ -46,7 +46,6 @@ class MyMembershipOut(BaseModel):
     workshop_id: uuid.UUID
     workshop_name: str
     role: str
-    sees_purchase_prices: bool
 
 
 class MeOut(BaseModel):

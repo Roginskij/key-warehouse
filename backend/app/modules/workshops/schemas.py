@@ -37,7 +37,6 @@ class WorkshopOut(BaseModel):
 
 class MyWorkshopOut(WorkshopOut):
     my_role: str
-    sees_purchase_prices: bool
 
 
 class MemberOut(BaseModel):
@@ -46,19 +45,16 @@ class MemberOut(BaseModel):
     email: str
     full_name: str
     role: str
-    can_see_purchase_prices: bool
     joined_at: datetime
 
 
 class MemberUpdateIn(BaseModel):
     role: WorkshopRole | None = None
-    can_see_purchase_prices: bool | None = None
 
 
 class InvitationCreateIn(BaseModel):
     email: EmailStr
     role: WorkshopRole = WorkshopRole.MASTER
-    can_see_purchase_prices: bool = False
 
 
 class InvitationOut(BaseModel):
@@ -67,7 +63,6 @@ class InvitationOut(BaseModel):
     id: uuid.UUID
     email: str
     role: str
-    can_see_purchase_prices: bool
     expires_at: datetime
     accepted_at: datetime | None
     revoked_at: datetime | None

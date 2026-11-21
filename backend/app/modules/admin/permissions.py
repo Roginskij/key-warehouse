@@ -11,3 +11,6 @@ class AdminPerm(StrEnum):
     CATALOG_EDIT = "catalog.edit"
     CATALOG_MODERATE = "catalog.moderate"  # approve / merge / reject proposed items
     CATALOG_IMPORT = "catalog.import"
+    CATALOG_ATTRIBUTES = "catalog.attributes"  # manage the characteristics lists
+    # See workshops (people, size, activity). Their stock: superadmin only.
+    WORKSHOPS_VIEW = "workshops.view"

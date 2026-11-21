@@ -87,6 +87,12 @@ export default {
     text: 'La clé a peut-être été renommée ou fusionnée avec une autre.',
     home: 'Accueil',
   },
+  attrs: {
+    title: 'Caractéristiques',
+    yes: 'oui',
+    no: 'non',
+    bad: 'Valeur incorrecte',
+  },
   kinds: {
     blank: 'Ébauche de clé',
     car_key: 'Clé de voiture',

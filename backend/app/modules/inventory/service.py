@@ -162,6 +162,10 @@ def items_stmt(
             InventoryItem.name.ilike(text),
             InventoryItem.vehicles.ilike(text),
             InventoryItem.brand.ilike(text),
+            # The catalog name of linked items.
+            InventoryItem.catalog_item_id.in_(
+                select(CatalogItem.id).where(CatalogItem.name.ilike(text))
+            ),
         ]
         qn = normalize_code(q)
         if qn:
@@ -203,6 +207,36 @@ async def find_duplicate(
 # --- catalog link ----------------------------------------------------------------------
 
 
+async def canonical_brand(session: AsyncSession, raw: str | None) -> str | None:
+    """Brands come only from the catalog's list: 'SILCA', 'silca' -> 'Silca'."""
+    if not raw or not raw.strip():
+        return None
+    brand = await session.scalar(
+        select(Brand).where(
+            Brand.name_normalized == normalize_brand(raw), Brand.is_active.is_(True)
+        )
+    )
+    if brand is None:
+        raise AppError("inventory.unknown_brand", message=f"Brand {raw!r} is not in the list")
+    return brand.name
+
+
+def take_from_catalog(item: InventoryItem, cat: CatalogItem) -> None:
+    """Linked: the card decides kind, numbers and technical data. The workshop's name stays
+    (it is "what they call it"); an empty one becomes the catalog name."""
+    if not item.name:
+        item.name = cat.name
+    item.kind = cat.kind
+    item.frequency_mhz = cat.frequency_mhz
+    item.chip_type = cat.chip_type
+    item.fcc_id = cat.fcc_id
+    item.attributes = {}  # the card's characteristics are used from now on
+    if not item.code and cat.codes:
+        apply_code(item, cat.codes[0].brand.name, cat.codes[0].code)
+    item.catalog_item_id = cat.id
+    item.catalog_review = None
+
+
 async def find_catalog_match(
     session: AsyncSession, brand: str | None, code: str | None
 ) -> CatalogItem | None:
@@ -237,7 +271,7 @@ async def auto_link(session: AsyncSession, user: User, item: InventoryItem) -> s
         return "linked"
     match = await find_catalog_match(session, item.brand, item.code)
     if match:
-        item.catalog_item_id = match.id
+        take_from_catalog(item, match)
         return "linked"
     if item.brand and item.code and item.kind in ItemKind.__members__.values():
         body = proposals.NewItemProposal(
@@ -248,8 +282,10 @@ async def auto_link(session: AsyncSession, user: User, item: InventoryItem) -> s
             frequency_mhz=item.frequency_mhz,
             chip_type=item.chip_type,
             fcc_id=item.fcc_id,
+            attributes=item.attributes or {},
         )
         await proposals.submit(session, user, item.workshop_id, body)
+        item.catalog_review = "pending"
         return "proposed"
     return "none"
 
@@ -374,8 +410,6 @@ async def move(
 
     if type == MovementType.SALE and unit_price is None and item.sale_price is not None:
         unit_price, currency = item.sale_price, item.sale_currency
-    if type == MovementType.RECEIPT and unit_price is None and item.purchase_price is not None:
-        unit_price, currency = item.purchase_price, item.purchase_currency
     if unit_price is not None and currency is None:
         workshop = await session.get(Workshop, item.workshop_id)
         currency = workshop.base_currency
@@ -423,50 +457,3 @@ def to_base(amount: Decimal | None, currency: str | None, rates: dict[str, Decim
     if amount is None or currency is None or currency not in rates:
         return None
     return (amount * rates[currency]).quantize(Decimal("0.01"))
-
-
-async def stock_value(session: AsyncSession, workshop: Workshop) -> dict[str, Any]:
-    """How much money lies on the shelves, at purchase prices."""
-    rows = (
-        await session.execute(
-            select(
-                InventoryItem.purchase_currency,
-                func.sum(InventoryItem.quantity * InventoryItem.purchase_price),
-                func.count(),
-            )
-            .where(
-                InventoryItem.workshop_id == workshop.id,
-                InventoryItem.is_archived.is_(False),
-                InventoryItem.quantity > 0,
-                InventoryItem.purchase_price.is_not(None),
-            )
-            .group_by(InventoryItem.purchase_currency)
-        )
-    ).all()
-    without_price = await session.scalar(
-        select(func.count()).where(
-            InventoryItem.workshop_id == workshop.id,
-            InventoryItem.is_archived.is_(False),
-            InventoryItem.quantity > 0,
-            InventoryItem.purchase_price.is_(None),
-        )
-    )
-    rates = await rates_map(session, workshop)
-    total = Decimal(0)
-    missing = []
-    by_currency = []
-    for currency, amount, count in rows:
-        amount = (amount or Decimal(0)).quantize(Decimal("0.01"))
-        by_currency.append({"currency": currency, "amount": amount, "items": count})
-        converted = to_base(amount, currency, rates)
-        if converted is None:
-            missing.append(currency)
-        else:
-            total += converted
-    return {
-        "base_currency": workshop.base_currency,
-        "total_in_base": total.quantize(Decimal("0.01")),
-        "by_currency": by_currency,
-        "currencies_without_rate": missing,
-        "items_without_purchase_price": without_price,
-    }

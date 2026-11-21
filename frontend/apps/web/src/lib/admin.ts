@@ -10,3 +10,15 @@ export function useBrands() {
     staleTime: 60_000,
   })
 }
+
+/** Admin rights the superadmin can give. Keep in sync with backend AdminPerm. */
+export const PERMS = [
+  'users.view',
+  'users.manage',
+  'workshops.view',
+  'catalog.view',
+  'catalog.edit',
+  'catalog.moderate',
+  'catalog.import',
+  'catalog.attributes',
+] as const

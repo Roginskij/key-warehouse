@@ -87,6 +87,12 @@ export default {
     text: 'The key may have been renamed or merged with another one.',
     home: 'Home page',
   },
+  attrs: {
+    title: 'Characteristics',
+    yes: 'yes',
+    no: 'no',
+    bad: 'Wrong value',
+  },
   kinds: {
     blank: 'Key blank',
     car_key: 'Car key',

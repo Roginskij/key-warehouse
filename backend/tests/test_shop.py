@@ -150,7 +150,6 @@ async def test_workshop_profile_and_find_a_workshop(client, boss):
                 "code": "HU66",
                 "quantity": 3,
                 "sale_price": "250",
-                "purchase_price": "90",
             },
             headers=h,
         )
@@ -167,7 +166,6 @@ async def test_workshop_profile_and_find_a_workshop(client, boss):
     ws = (await client.get(f"{PUB}/keys/{slug}/workshops", params={"country": "UA"})).json()
     assert ws[0]["in_stock"] is True
     assert ws[0]["price"] == {"mode": "exact", "amount": "250.00", "currency": "UAH"}
-    assert "90" not in str(ws)
     assert "tax_id" not in ws[0]
 
     assert (await client.get(f"{PUB}/cities")).json() == ["Київ"]

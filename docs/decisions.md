@@ -64,9 +64,7 @@ Business plan: `~/Desktop/mvp-plan.md` (stage 1 = MVP).
 - A default "Main" location is created per workshop automatically.
 - Locations: any depth tree; filtering by a location includes everything inside it.
 - Prices: own currency per price; the owner sets manual workshop rates
-  ("1 USD = 41.5 UAH"); value and `sale_price_in_base` use them. Auto rates (NBU/ECB) later.
-- Masters without price access: purchase prices removed from every response,
-  export, history; value screen forbidden; they can still move stock.
+  ("1 USD = 41.5 UAH"); `sale_price_in_base` uses them. Auto rates (NBU/ECB) later.
 - Same brand+number twice in one workshop is refused (duplicate).
 - New items auto-link to the catalog by exact number; unknown brand+number goes to
   the catalog moderation queue automatically (one vote per workshop).
@@ -164,11 +162,8 @@ also buy keywarehaus.com (typo redirect). Trademark check still to do (see Remin
   with that number that is not linked yet gets linked automatically.
 - UserOut now includes `is_active`.
 
-## 2026-11-13 — stock value screen, "download my data"
+## 2026-11-13 — "download my data"
 
-- `/value` screen (sidebar, "Ще"): total at purchase prices in base currency, per purchase
-  currency, warning for currencies without a rate (owner → set rate), count of items without
-  purchase price. Hidden for masters who may not see purchase prices.
 - GDPR access: `GET /users/me/export` → JSON file (profile, workshops, sessions, invitations
   sent, the person's stock changes incl. client names they entered, catalog proposals they
   supported). Workshop stock itself stays in the owner's Excel export. Max 10/hour.
@@ -218,8 +213,7 @@ also buy keywarehaus.com (typo redirect). Trademark check still to do (see Remin
 - **Nothing is public by default.** A workshop appears only after the owner switches on
   "Show my workshop in search" (Search profile screen) — that switch is the consent.
   City and at least one contact are required then. A stock item shows "in stock" only
-  when it is ticked "Show on the search site"; quantity and purchase price never leave
-  the backend. Prices follow the workshop's choice: ask / "from N" / exact.
+  when it is ticked "Show on the search site"; the quantity never leaves the backend. Prices follow the workshop's choice: ask / "from N" / exact.
 - **Verification fields only for now:** tax / VAT number + status (none, pending,
   verified, rejected). Nothing is checked yet; verified workshops get a badge later.
 - **Thin pages are not published:** a key page exists only for an active item with a
@@ -244,3 +238,89 @@ also buy keywarehaus.com (typo redirect). Trademark check still to do (see Remin
 - Local demo: `uv run python -m app.seed_demo --shop` lists the demo workshop on the site.
 - **Deploy note:** photos are files in `MEDIA_DIR`. On Railway that folder needs a volume
   (or move to S3-compatible storage), otherwise photos vanish on every deploy.
+
+## 2026-11-20 — "Stock value" screen removed (owner's decision)
+
+The screen and its API (`GET …/inventory/value`) are gone from the app and the backend.
+Currency rates stay: they still convert sale prices into the base currency.
+
+## 2026-11-20 — admin = "what to do today" (owner's request)
+
+The admin start page is now a to-do list instead of a set of tools, top to bottom:
+1. new codes from workshops waiting for a decision → Proposals;
+2. keys workshops have in stock but that are not on the site (no description and no
+   car/lock fits) — most-stocked first;
+3. cards that look like the same key (same name, or codes differing by one end letter,
+   e.g. HU66 / HU66P) → "Same key — merge" (choose the main card) or "Different keys"
+   (remembered in `catalog_duplicate_dismissals`, never suggested again);
+4. keys on the site without a photo (optional).
+Usage numbers moved below under "How it goes". Brands, Import and History are under
+"More" in the menu. The key card shows at the top whether the key is on the site and
+what is missing. API: `GET /admin/todo`, `POST /admin/todo/duplicates/dismiss`.
+
+## 2026-11-20 — staff accounts; superadmin sees workshop stock (owner's decision)
+
+- **Staff = KeyVerhaus team, not workshops.** Invited by the superadmin (Admin → Users →
+  "Invite a team member") with chosen rights; they set name + password from the e-mail
+  link and get no workshop. An e-mail that already has an account cannot be invited
+  (staff use a separate work e-mail). Public sign-up still always creates a workshop.
+- **After login staff land in /admin.** Stock pages redirect there; only "More"
+  (password, language, own data) stays open. The admin menu shows "My account" instead
+  of "Back to stock" when there is no workshop.
+- **Admin → Workshops (right `workshops.view`), read-only:** name, country, people,
+  number of items, last action, on the site, tax id. Search by name or owner's e-mail.
+- **Workshop stock: superadmin only, automatically** — no permission from the owner and
+  no view log (owner's decision; an earlier "support access" switch was dropped before
+  release). Customers are never shown there.
+- [ ] Privacy policy / terms must say that the platform operator can see a workshop's
+  stock (items, quantities, sale prices) for support and catalog work.
+- No impersonation ("log in as the workshop") on purpose.
+
+## 2026-11-20 — no purchase price (cost) at all (owner's decision)
+
+- Items have only a sale price. There is no purchase price field anywhere — model,
+  API, history, Excel, data export, app — and no "sees purchase prices" right for masters.
+  Migration `eb7c9954be72` dropped the columns and wiped such prices from old history.
+- Excel import: columns like "закупка / purchase price" are skipped on purpose, so a
+  "цена закупки" column is never taken for the sale price.
+
+## 2026-11-20 — stock is built from the catalog (owner's decision)
+
+Goal: one structure for everybody, clean search and links — the stock is not a notebook.
+- **Adding an item starts with the catalog.** Search by any brand's number or a name →
+  pick the card. Kind, numbers and technical data come from the card and cannot be
+  edited while linked (`inventory.catalog_fields_locked`). The same card twice in one
+  workshop is refused.
+- **Not in the catalog** → "add by hand": brand **only from the brand list**
+  (`inventory.unknown_brand` otherwise), number and kind are required. While typing the
+  number the app asks "maybe it is already in the catalog?". The item works at once,
+  marked **"in review"**; a proposal goes to the admin. Accepted → it gets linked;
+  rejected → marked "not added to the catalog".
+- **"Назва" = what the workshop calls it** (owner's decision: one field, no separate
+  "own name"). Optional; empty = the catalog name (not in the catalog: brand + number).
+  Linked items show the catalog name first and the workshop's "Назва" under it
+  (`my_name` in the API); searchable. Always editable, even when linked.
+- The free "fits cars" text field is gone from the forms (cars come from catalog fits).
+- **Excel import, same rules:** brand must be in the list, rows the catalog does not know
+  need a brand + number (`inventory.not_in_catalog`), otherwise the row is reported and skipped.
+- `catalog_status` on every stock item: linked / pending / rejected / none.
+
+## 2026-11-20 — characteristics of a key, managed in the admin (owner's decision)
+
+- Live in the **catalog card** (`CatalogItem.attributes` = {field key: value}). The fields
+  are **per kind** — never per single card, so all cards of a kind are filled the same way.
+- **Admin → More → Characteristics** (right `catalog.attributes`, superadmin has it):
+  add a field (list / number / yes-no), rename it, set number limits, add and rename list
+  values, change the order, hide. Tables `catalog_attribute_defs` / `_options`; the first
+  list (23 fields) was moved there from code (`attribute_seed.py`).
+- Rules that keep card data safe: keys never change (values are stored under them, labels
+  are free to rename); a field or value used in cards can be hidden, not deleted, and the
+  field's type cannot change; hidden fields keep their values in cards; a hidden value
+  stays where it is but cannot be chosen anew. Names in Ukrainian and English are required,
+  other languages optional (fallback: English).
+- Validation: values only from the visible list, numbers within limits
+  (`catalog.bad_attribute`, params.field); unknown fields are dropped.
+- A workshop fills them only when adding a key not in the catalog — they go to review with
+  it. Linked stock items show the card's characteristics, read-only.
+- The site shows them on the key page (labels from the database in the page's language)
+  and in the JSON-LD (`additionalProperty`).

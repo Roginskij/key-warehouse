@@ -82,6 +82,20 @@ TEMPLATES: dict[str, dict[str, tuple[str, str]]] = {
             "Il link è valido per {minutes} minuti. Se non l'hai richiesto, ignora questa e-mail.",
         ),
     },
+    "staff_invitation": {
+        "en": (
+            "KeyVerhaus admin access",
+            "Hello,\n\n{name} invites you to the KeyVerhaus team (admin panel).\n"
+            "Open this link to create your account:\n{link}\n\n"
+            "The invitation is valid for {days} days.",
+        ),
+        "uk": (
+            "Доступ до адмінки KeyVerhaus",
+            "Вітаємо!\n\n{name} запрошує вас до команди KeyVerhaus (адмінка).\n"
+            "Щоб створити акаунт, відкрийте посилання:\n{link}\n\n"
+            "Запрошення дійсне {days} дн.",
+        ),
+    },
     "invitation": {
         "en": (
             "Invitation to {workshop}",

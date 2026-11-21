@@ -149,3 +149,34 @@ export function useMove() {
 
   return { move, moveWithUndo }
 }
+
+export type AttributeField = Schemas['AttributeFieldOut']
+export type Attributes = Record<string, unknown>
+
+/** Characteristics fields per kind, as the admin set them (Admin → Characteristics). */
+export function useAttributeSpec() {
+  return useQuery({
+    queryKey: ['attribute-spec'],
+    queryFn: () => call(client.GET('/api/v1/catalog/attributes')),
+    staleTime: 5 * 60_000,
+  })
+}
+
+/** Label in the user's language; English, then Ukrainian when not translated. */
+export function pickLabel(labels: Record<string, string> | undefined, locale: string): string {
+  return labels?.[locale] || labels?.en || labels?.uk || ''
+}
+
+/** "Кнопок: 3", "Лезо: викидне" — labels and values in the user's language. */
+export function useAttributeText() {
+  const { t, locale } = useI18n()
+  const { data: spec } = useAttributeSpec()
+  const field = (kind: string, key: string) => spec.value?.[kind]?.find((f) => f.key === key)
+  const label = (kind: string, key: string) => pickLabel(field(kind, key)?.labels, locale.value) || key
+  const value = (kind: string, key: string, v: unknown) => {
+    if (typeof v === 'boolean') return v ? t('attrs.yes') : t('attrs.no')
+    const opt = field(kind, key)?.options.find((o) => o.key === String(v))
+    return opt ? pickLabel(opt.labels, locale.value) : String(v)
+  }
+  return { label, value }
+}

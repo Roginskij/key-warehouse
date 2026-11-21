@@ -19,10 +19,10 @@ async def owner(client):
     return h, f"{API}/workshops/{wid}/inventory", wid
 
 
-async def _master(client, owner_h, wid, can_see=False):
+async def _master(client, owner_h, wid):
     await client.post(
         f"{API}/workshops/{wid}/invitations",
-        json={"email": "master@example.com", "can_see_purchase_prices": can_see},
+        json={"email": "master@example.com"},
         headers=owner_h,
     )
     r = await client.post(
@@ -37,8 +37,13 @@ async def _master(client, owner_h, wid, can_see=False):
     return auth(r.json()["tokens"])
 
 
+_codes = iter(range(1000, 100000))
+
+
 async def _add(client, h, base, **fields):
-    payload = {"kind": "blank", "name": "Item", **fields}
+    """A key the catalog does not know yet: brand from the list + a fresh number."""
+    payload = {"kind": "blank", "name": "Item", "brand": "Errebi", "code": f"T{next(_codes)}"}
+    payload.update(fields)
     r = await client.post(f"{base}/items", json=payload, headers=h)
     assert r.status_code == 201, r.text
     return r.json()
@@ -58,14 +63,11 @@ async def test_create_item_with_quantity_and_one_tap(client, owner):
         brand="Silca",
         code="HU66",
         quantity=5,
-        purchase_price="1.50",
-        purchase_currency="USD",
         sale_price="120",
         min_quantity=3,
     )
     assert item["quantity"] == 5
     assert item["sale_currency"] == "UAH"  # defaults to workshop base currency
-    assert item["purchase_currency"] == "USD"
     assert len(item["levels"]) == 1
 
     r = await _move(client, h, base, item["id"], type="adjust", quantity=-1)
@@ -188,19 +190,17 @@ async def test_search_by_own_code_catalog_code_and_car(client, owner):
         },
         headers=h,
     )
-    item = await _add(
-        client,
-        h,
-        base,
-        name="Заготовка VW",
-        brand="Silca",
-        code="HU66",
-        vehicles="VW Golf 4, Passat B5",
-    )
+    item = await _add(client, h, base, name="Заготовка VW", brand="Silca", code="HU66")
     assert item["catalog"] == "linked"
     assert item["catalog_item"]["name"] == "HU66"
+    # The card's name leads; what the workshop typed stays as its "Назва".
+    assert (item["name"], item["my_name"], item["catalog_status"]) == (
+        "HU66",
+        "Заготовка VW",
+        "linked",
+    )
 
-    for q in ("hu66", "HU66P", "jma hu-66"[4:], "golf", "заготовка"):
+    for q in ("hu66", "HU66P", "jma hu-66"[4:], "заготовка"):
         r = await client.get(f"{base}/items", params={"q": q}, headers=h)
         assert r.json()["total"] == 1, q
 
@@ -214,9 +214,7 @@ async def test_unknown_code_is_proposed_to_catalog(client, owner):
     ).json()
     assert props[0]["type"] == "new_item"
     assert props[0]["payload"]["codes"] == [{"brand": "Errebi", "code": "XYZ-9"}]
-    # No brand → nothing proposed.
-    item = await _add(client, h, base, name="My own thing", code="Q1")
-    assert item["catalog"] == "none"
+    assert item["catalog_status"] == "pending"
 
 
 async def test_duplicate_number_in_same_workshop(client, owner):
@@ -231,18 +229,14 @@ async def test_duplicate_number_in_same_workshop(client, owner):
     assert r.json()["error"]["params"]["item_id"] == first["id"]
 
 
-async def test_master_does_not_see_purchase_prices(client, owner):
+async def test_master_works_with_stock(client, owner):
     h, base, wid = owner
-    item = await _add(client, h, base, quantity=2, purchase_price="10", sale_price="50")
+    item = await _add(client, h, base, quantity=2, sale_price="50")
     m = await _master(client, h, wid)
 
     got = (await client.get(f"{base}/items/{item['id']}", headers=m)).json()
-    assert got["purchase_price"] is None and got["purchase_price_hidden"] is True
     assert got["sale_price"] == "50.00"
-
-    assert (await client.get(f"{base}/value", headers=m)).status_code == 403
-    r = await client.patch(f"{base}/items/{item['id']}", json={"purchase_price": "1"}, headers=m)
-    assert r.json()["error"]["code"] == "inventory.purchase_prices_hidden"
+    assert not any("purchase" in k for k in got)
     hist = (await client.get(f"{base}/movements", headers=m)).json()["items"]
     assert hist[0]["type"] == "initial"
     # Master can still work with stock.
@@ -263,7 +257,7 @@ async def test_other_workshop_cannot_touch_items(client, owner):
     assert r.status_code == 404
 
 
-async def test_reorder_value_and_rates(client, owner):
+async def test_reorder_and_rates(client, owner):
     h, base, _ = owner
     await _add(
         client,
@@ -272,24 +266,14 @@ async def test_reorder_value_and_rates(client, owner):
         name="Low",
         quantity=1,
         min_quantity=5,
-        purchase_price="2",
-        purchase_currency="USD",
     )
-    await _add(client, h, base, name="Ok", quantity=10, min_quantity=5, purchase_price="30")
-    await _add(client, h, base, name="No price", quantity=3)
+    await _add(client, h, base, name="Ok", quantity=10, min_quantity=5)
 
     reorder = (await client.get(f"{base}/reorder", headers=h)).json()
     assert [i["name"] for i in reorder["items"]] == ["Low"]
 
-    value = (await client.get(f"{base}/value", headers=h)).json()
-    assert value["total_in_base"] == "300.00"  # USD without a rate is not counted
-    assert value["currencies_without_rate"] == ["USD"]
-    assert value["items_without_purchase_price"] == 1
-
     r = await client.put(f"{base}/rates/usd", json={"rate": "41.5"}, headers=h)
     assert r.status_code == 200
-    value = (await client.get(f"{base}/value", headers=h)).json()
-    assert value["total_in_base"] == "383.00"  # 300 + 1*2*41.5
     r = await client.put(f"{base}/rates/UAH", json={"rate": "1"}, headers=h)
     assert r.json()["error"]["code"] == "inventory.rate_for_base"
 
@@ -321,10 +305,12 @@ async def test_edit_history_and_archive(client, owner):
 UA_TABLE = (
     "Назва;Артикул;Виробник;К-сть;Ціна закупівлі;Ціна;Марка авто;Ящик;Мін\n"
     "Заготовка VW;HU66;Silca;10;1,50;120;VW Golf;Ящик 1;5\n"
-    "Брелок Ford 3 кн;FO21-R;;2;250;800;Ford Focus;;\n"
+    "Брелок Ford 3 кн;FO21-R;Ilco;2;250;800;Ford Focus;;\n"
     ";;;;;;;;\n"
     "Чип ID46;ID46;;abc;;;;;\n"
     "Заготовка VW дубль;HU-66;silca;1;;;;;\n"
+    "Щось своє;Q-1;;1;;;;;\n"
+    "Невідомий бренд;Q-2;Silka;1;;;;;\n"
 ).encode("cp1251")
 
 
@@ -334,13 +320,13 @@ async def test_import_analyze_preview_and_apply(client, owner):
     r = await client.post(f"{base}/import/analyze", files=files, headers=h)
     assert r.status_code == 200, r.text
     a = r.json()
-    assert a["rows_total"] == 4
+    assert a["rows_total"] == 6
     assert a["suggested_mapping"] == {
         "name": "Назва",
         "code": "Артикул",
         "brand": "Виробник",
         "quantity": "К-сть",
-        "purchase_price": "Ціна закупівлі",
+        # "Ціна закупівлі" is a cost column: never suggested (and never taken for "Ціна").
         "sale_price": "Ціна",
         "min_quantity": "Мін",
         "vehicles": "Марка авто",
@@ -350,7 +336,12 @@ async def test_import_analyze_preview_and_apply(client, owner):
     data = {"mapping": json.dumps(a["suggested_mapping"]), "dry_run": "true"}
     preview = (await client.post(f"{base}/import", files=files, data=data, headers=h)).json()
     assert preview["created"] == 2
-    assert [e["row"] for e in preview["errors"]] == [5]  # "abc" quantity
+    # 5: "abc" quantity; 7: not in the catalog and no brand; 8: brand not in the list.
+    assert [(e["row"], e["reason"]) for e in preview["errors"]][1:] == [
+        (7, "inventory.not_in_catalog"),
+        (8, "inventory.unknown_brand"),
+    ]
+    assert preview["errors"][0]["row"] == 5
     assert [d["row"] for d in preview["duplicates"]] == [6]
     assert (await client.get(f"{base}/items", headers=h)).json()["total"] == 0
 
@@ -360,31 +351,23 @@ async def test_import_analyze_preview_and_apply(client, owner):
 
     items = {i["name"]: i for i in (await client.get(f"{base}/items", headers=h)).json()["items"]}
     vw = items["Заготовка VW"]
-    assert (vw["quantity"], vw["purchase_price"], vw["sale_price"], vw["min_quantity"]) == (
-        10,
-        "1.50",
-        "120.00",
-        5,
-    )
+    assert (vw["quantity"], vw["sale_price"], vw["min_quantity"]) == (10, "120.00", 5)
     assert items["Брелок Ford 3 кн"]["kind"] == "remote"  # recognized from the name
     locs = {loc["name"] for loc in (await client.get(f"{base}/locations", headers=h)).json()}
     assert "Ящик 1" in locs
 
 
-async def test_export_xlsx_hides_purchase_for_master(client, owner):
+async def test_export_xlsx(client, owner):
     from openpyxl import load_workbook
 
-    h, base, wid = owner
-    await _add(client, h, base, name="Exported", quantity=3, purchase_price="5", sale_price="9")
+    h, base, _ = owner
+    await _add(client, h, base, name="Exported", quantity=3, sale_price="9")
     r = await client.get(f"{base}/export", headers=h)
     assert r.status_code == 200
     ws = load_workbook(io.BytesIO(r.content)).active
     headers = [c.value for c in ws[1]]
-    assert "Purchase price" in headers and ws.cell(2, 1).value == "Exported"
-
-    m = await _master(client, h, wid)
-    ws = load_workbook(io.BytesIO((await client.get(f"{base}/export", headers=m)).content)).active
-    assert "Purchase price" not in [c.value for c in ws[1]]
+    assert "Sale price" in headers and ws.cell(2, 1).value == "Exported"
+    assert not any("urchase" in str(c) for c in headers)
 
 
 async def test_photo_upload(client, owner, tmp_path, monkeypatch):
@@ -452,3 +435,123 @@ async def test_accepted_proposal_links_workshop_stock(client, owner):
     assert r.status_code == 200
     got = (await client.get(f"{base}/items/{item['id']}", headers=h)).json()
     assert got["catalog_item"]["id"] == r.json()["id"]
+
+
+async def test_stock_is_built_from_the_catalog(client, owner):
+    h, base, _ = owner
+    async with SessionLocal() as s:
+        await s.execute(
+            update(User).where(User.email == "owner@example.com").values(is_superadmin=True)
+        )
+        await s.commit()
+    card = (
+        await client.post(
+            f"{API}/admin/catalog/items",
+            json={
+                "kind": "car_key",
+                "name": "Ford FO21",
+                "codes": [{"brand": "JMA", "code": "FO-21D"}],
+            },
+            headers=h,
+        )
+    ).json()
+
+    # From the catalog: only the card is given, the rest comes from it.
+    item = await _add(
+        client,
+        h,
+        base,
+        catalog_item_id=card["id"],
+        name="форд",
+        kind=None,
+        brand=None,
+        code=None,
+    )
+    assert (item["name"], item["kind"], item["my_name"]) == ("Ford FO21", "car_key", "форд")
+    assert (item["brand"], item["code"]) == ("JMA", "FO-21D")
+    r = await client.post(f"{base}/items", json={"catalog_item_id": card["id"]}, headers=h)
+    assert r.status_code == 409  # the same card twice
+
+    # Its catalog fields are locked; the name, price etc. are not.
+    r = await client.patch(f"{base}/items/{item['id']}", json={"code": "X1"}, headers=h)
+    assert r.json()["error"]["code"] == "inventory.catalog_fields_locked"
+    r = await client.patch(
+        f"{base}/items/{item['id']}", json={"name": "форд 3 кн", "sale_price": "800"}, headers=h
+    )
+    assert r.json()["my_name"] == "форд 3 кн" and r.json()["sale_price"] == "800.00"
+    assert (await client.get(f"{base}/items", params={"q": "форд"}, headers=h)).json()["total"] == 1
+    # Empty name = back to the catalog name.
+    r = await client.patch(f"{base}/items/{item['id']}", json={"name": ""}, headers=h)
+    assert (r.json()["name"], r.json()["my_name"]) == ("Ford FO21", None)
+
+    # Not in the catalog: brand only from the list, brand + number required.
+    r = await client.post(
+        f"{base}/items",
+        json={"kind": "blank", "name": "x", "brand": "Silka", "code": "A1"},
+        headers=h,
+    )
+    assert r.json()["error"]["code"] == "inventory.unknown_brand"
+    r = await client.post(f"{base}/items", json={"kind": "blank", "name": "x"}, headers=h)
+    assert r.json()["error"]["code"] == "inventory.new_item_details_required"
+    # The name is optional: without it, brand + number.
+    new = await _add(client, h, base, name=None, brand="SILCA", code="ZZ-1")
+    assert (new["name"], new["brand"], new["catalog_status"]) == ("Silca ZZ-1", "Silca", "pending")
+
+
+async def test_review_result_reaches_the_workshop(client, owner):
+    h, base, _ = owner
+    async with SessionLocal() as s:
+        await s.execute(
+            update(User).where(User.email == "owner@example.com").values(is_superadmin=True)
+        )
+        await s.commit()
+    good = await _add(client, h, base, name="Мій ключ", brand="Ilco", code="GOOD1")
+    bad = await _add(client, h, base, name="Опечатка", brand="Ilco", code="BAD1")
+    props = {
+        p["payload"]["codes"][0]["code"]: p["id"]
+        for p in (await client.get(f"{API}/admin/catalog/proposals", headers=h)).json()["items"]
+    }
+
+    await client.post(
+        f"{API}/admin/catalog/proposals/{props['GOOD1']}/accept",
+        json={"name": "Ilco GOOD1"},
+        headers=h,
+    )
+    await client.post(f"{API}/admin/catalog/proposals/{props['BAD1']}/reject", json={}, headers=h)
+
+    g = (await client.get(f"{base}/items/{good['id']}", headers=h)).json()
+    assert (g["catalog_status"], g["name"], g["my_name"]) == ("linked", "Ilco GOOD1", "Мій ключ")
+    b = (await client.get(f"{base}/items/{bad['id']}", headers=h)).json()
+    assert b["catalog_status"] == "rejected"
+
+
+async def test_characteristics_of_a_new_key_go_to_review_with_it(client, owner):
+    h, base, _ = owner
+    item = await _add(
+        client,
+        h,
+        base,
+        kind="remote",
+        brand="Ilco",
+        code="RM-3",
+        attributes={"buttons": 3, "battery": "CR2032"},
+    )
+    assert item["attributes"] == {"buttons": 3, "battery": "CR2032"}
+    async with SessionLocal() as s:
+        await s.execute(
+            update(User).where(User.email == "owner@example.com").values(is_superadmin=True)
+        )
+        await s.commit()
+    prop = (await client.get(f"{API}/admin/catalog/proposals", headers=h)).json()["items"][0]
+    assert prop["payload"]["attributes"] == {"buttons": 3, "battery": "CR2032"}
+    card = (
+        await client.post(f"{API}/admin/catalog/proposals/{prop['id']}/accept", headers=h)
+    ).json()
+    assert card["attributes"] == {"buttons": 3, "battery": "CR2032"}
+    # Linked now: the card's characteristics, locked for the workshop.
+    got = (await client.get(f"{base}/items/{item['id']}", headers=h)).json()
+    assert got["catalog_status"] == "linked" and got["attributes"] == card["attributes"]
+    r = await client.patch(
+        f"{base}/items/{item['id']}", json={"attributes": {"buttons": 2}}, headers=h
+    )
+    assert r.json()["error"]["code"] == "inventory.catalog_fields_locked"

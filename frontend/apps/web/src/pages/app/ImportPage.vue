@@ -28,7 +28,7 @@
       <p class="m-0 px-1 text-muted">{{ t('import.mapText') }}</p>
       <p class="m-0 flex items-center gap-2 px-1 text-[15px]"><UIIcon name="file" :size="20" />{{ file?.name }} · {{ t('import.rows', { n: num(analysis.rows_total) }) }}</p>
       <section class="flex flex-col divide-y divide-ground rounded-card border border-line bg-surface px-4">
-        <div v-for="f in visibleFields" :key="f" class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,11rem)] items-center gap-2 py-2.5">
+        <div v-for="f in FIELDS" :key="f" class="grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,11rem)] items-center gap-2 py-2.5">
           <span
             class="flex size-7 items-center justify-center rounded-full text-sm font-bold"
             :class="mapping[f] ? 'bg-primary-soft' : 'bg-ground text-faint'"
@@ -63,7 +63,7 @@
         <div v-if="report.errors.length" class="rounded-control bg-warn-bg p-3 text-warn">
           <p class="m-0 font-semibold">{{ t('import.errors', { n: report.errors.length }) }}</p>
           <ul class="m-0 mt-1 pl-5 text-[15px]">
-            <li v-for="e in report.errors.slice(0, 10)" :key="e.row">{{ t('import.row', { n: e.row }) }}: {{ e.reason }}</li>
+            <li v-for="e in report.errors.slice(0, 10)" :key="e.row">{{ t('import.row', { n: e.row }) }}: {{ reasonText(e.reason) }}</li>
           </ul>
         </div>
       </section>
@@ -109,7 +109,7 @@ interface Report {
   dry_run: boolean
 }
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const session = useSession()
 const qc = useQueryClient()
 const { data: currencies } = useCurrencies()
@@ -127,8 +127,7 @@ const error = ref('')
 const busy = ref(false)
 const base = `/api/v1/workshops/${session.wid}/inventory/import`
 
-const FIELDS = ['name', 'code', 'brand', 'kind', 'quantity', 'sale_price', 'purchase_price', 'min_quantity', 'vehicles', 'location', 'notes', 'stale']
-const visibleFields = computed(() => FIELDS.filter((f) => session.seesPurchase || f !== 'purchase_price'))
+const FIELDS = ['name', 'code', 'brand', 'kind', 'quantity', 'sale_price', 'min_quantity', 'vehicles', 'location', 'notes', 'stale']
 const colOptions = computed(() => [
   { value: '', label: t('import.notInFile') },
   ...(analysis.value?.headers ?? []).map((h) => ({ value: h, label: h })),
@@ -196,5 +195,11 @@ function restart() {
   file.value = null
   analysis.value = null
   report.value = null
+}
+
+// Row errors come as codes ("inventory.unknown_brand") or a short parser message.
+const reasonText = (r: string) => {
+  const key = `errors.${r.replace('.', '_')}`
+  return te(key) ? t(key) : r
 }
 </script>

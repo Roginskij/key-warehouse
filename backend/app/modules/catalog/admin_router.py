@@ -10,7 +10,7 @@ from app.core.deps import SessionDep, require_admin_perm
 from app.core.errors import AppError, Conflict, NotFound
 from app.core.security import utcnow
 from app.modules.admin.permissions import AdminPerm
-from app.modules.catalog import fits, images, importer, proposals, service
+from app.modules.catalog import attributes, fits, images, importer, proposals, service
 from app.modules.catalog.models import (
     Brand,
     CatalogAudit,
@@ -44,6 +44,7 @@ from app.modules.catalog.schemas import (
     LockFitIn,
     MergeIn,
     ProposalAcceptIn,
+    ProposalAdminOut,
     ProposalOut,
     ProposalPage,
     ProposalRejectIn,
@@ -172,7 +173,7 @@ async def create_item(data: ItemCreateIn, actor: Editor, session: SessionDep):
         frequency_mhz=data.frequency_mhz,
         chip_type=data.chip_type,
         fcc_id=data.fcc_id,
-        attributes=data.attributes,
+        attributes=await attributes.clean(session, data.kind, data.attributes),
     )
     await session.commit()
     return await _detail(session, item)
@@ -185,10 +186,16 @@ async def update_item(item_id: uuid.UUID, data: ItemUpdateIn, actor: Editor, ses
     if "status" in changes:
         if item.status == ItemStatus.MERGED or changes["status"] == ItemStatus.MERGED:
             raise AppError("catalog.bad_status", message="Use merge to merge items")
+    old_attributes = dict(item.attributes or {})
     for field, value in changes.items():
         if field in ("name",) and value is None:
             continue
         setattr(item, field, value.strip() if field == "name" else value)
+    if "attributes" in changes or "kind" in changes:
+        # Only the fields of the (new) kind, with valid values; hidden fields kept.
+        item.attributes = await attributes.clean(
+            session, item.kind, item.attributes, existing=old_attributes
+        )
     service.audit(session, actor, "item.update", "item", item.id, **changes)
     await session.commit()
     await session.refresh(item)
@@ -293,7 +300,15 @@ async def list_proposals(
         .limit(limit)
         .offset(offset)
     )
-    return ProposalPage(items=rows.all(), total=total)
+    items = []
+    for p in rows.all():
+        out = ProposalAdminOut.model_validate(p)
+        if p.type == ProposalType.NEW_ITEM and p.status == ProposalStatus.PENDING:
+            body = proposals.parse_payload(p)
+            out.suggestions = [brief_out(i) for i in await proposals.suggestions(session, body)]
+            out.stock_count = await proposals.stock_count(session, body)
+        items.append(out)
+    return ProposalPage(items=items, total=total)
 
 
 async def _proposal(session, proposal_id: uuid.UUID) -> CatalogProposal:
@@ -313,7 +328,7 @@ async def accept_proposal(
     """Applies the proposal and returns the resulting catalog item."""
     p = await _proposal(session, proposal_id)
     data = data or ProposalAcceptIn()
-    item = await proposals.accept(session, actor, p, data.kind, data.name)
+    item = await proposals.accept(session, actor, p, data.kind, data.name, data.attach_to)
     await session.commit()
     await session.refresh(item)
     return await _detail(session, item)

@@ -31,13 +31,41 @@ FIELDS = [
     "brand",
     "kind",
     "quantity",
-    "purchase_price",
     "sale_price",
     "min_quantity",
     "vehicles",
     "location",
     "notes",
     "stale",
+]
+
+# Cost / purchase-price columns of the workshop's old table. We do not keep such prices,
+# and a header like "цена закупки" must never be taken for the sale price ("цена").
+COST_HEADERS = [
+    "закупівельна ціна",
+    "закупочная цена",
+    "ціна закупівлі",
+    "цена закупки",
+    "закупка",
+    "закупівля",
+    "собівартість",
+    "себестоимость",
+    "вхід",
+    "вход",
+    "purchase price",
+    "purchase",
+    "cost",
+    "cena zakupu",
+    "zakup",
+    "einkaufspreis",
+    "einkauf",
+    "ek",
+    "prix d'achat",
+    "achat",
+    "precio de compra",
+    "compra",
+    "prezzo d'acquisto",
+    "acquisto",
 ]
 
 # Order matters: more specific words first. Compared with lowercased header.
@@ -62,32 +90,6 @@ SYNONYMS: dict[str, list[str]] = {
         "coche",
         "vehículo",
         "veicolo",
-    ],
-    "purchase_price": [
-        "закупівельна ціна",
-        "закупочная цена",
-        "ціна закупівлі",
-        "цена закупки",
-        "закупка",
-        "закупівля",
-        "собівартість",
-        "себестоимость",
-        "вхід",
-        "вход",
-        "purchase price",
-        "purchase",
-        "cost",
-        "cena zakupu",
-        "zakup",
-        "einkaufspreis",
-        "einkauf",
-        "ek",
-        "prix d'achat",
-        "achat",
-        "precio de compra",
-        "compra",
-        "prezzo d'acquisto",
-        "acquisto",
     ],
     "sale_price": [
         "ціна продажу",
@@ -389,9 +391,18 @@ TRUTHY = {
 }
 
 
+def _is_cost_header(low: str) -> bool:
+    # Short words ("ek", "cost") only as the whole header, longer ones anywhere in it.
+    return any(low == w or (len(w) >= 6 and w in low) for w in COST_HEADERS)
+
+
 def suggest_mapping(headers: list[str]) -> dict[str, str]:
     """our field -> header. Exact synonym match first, then 'header contains synonym'."""
-    lowered = {h: h.strip().lower() for h in headers if h and h.strip()}
+    lowered = {
+        h: h.strip().lower()
+        for h in headers
+        if h and h.strip() and not _is_cost_header(h.strip().lower())
+    }
     mapping: dict[str, str] = {}
     used: set[str] = set()
     for exact in (True, False):
@@ -519,11 +530,13 @@ async def run_import(
             continue
         try:
             async with session.begin_nested():
+                # Same rules as by hand: a brand only from the list; what the catalog does
+                # not know needs a brand + number to go to review.
+                brand = await service.canonical_brand(session, brand)
                 if await service.find_duplicate(session, workshop.id, brand, code):
                     report["duplicates"].append({"row": index, "code": code})
                     continue
                 qty = parse_int(cell(row, "quantity"))
-                purchase = parse_decimal(cell(row, "purchase_price"))
                 sale = parse_decimal(cell(row, "sale_price"))
                 loc_name = cell(row, "location")
                 loc_id = (
@@ -536,8 +549,6 @@ async def run_import(
                     kind=parse_kind(cell(row, "kind") or name, default_kind),
                     name=(name or code)[:200],
                     vehicles=(cell(row, "vehicles") or None),
-                    purchase_price=purchase,
-                    purchase_currency=currency if purchase is not None else None,
                     sale_price=sale,
                     sale_currency=currency if sale is not None else None,
                     min_quantity=parse_int(cell(row, "min_quantity")),
@@ -560,6 +571,11 @@ async def run_import(
                         note="import",
                     )
                 link = await service.auto_link(session, user, item)
+                if link == "none":
+                    raise AppError(
+                        "inventory.not_in_catalog",
+                        message="Not in the catalog: needs a brand from the list and a number",
+                    )
         except ValueError as exc:
             report["errors"].append({"row": index, "reason": str(exc)})
             continue
@@ -585,9 +601,7 @@ async def run_import(
 # --- export ----------------------------------------------------------------------------
 
 
-def export_xlsx(
-    items: list[InventoryItem], locations: dict, show_purchase: bool, base_currency: str
-) -> bytes:
+def export_xlsx(items: list[InventoryItem], locations: dict) -> bytes:
     from openpyxl import Workbook
     from openpyxl.styles import Font
 
@@ -607,8 +621,6 @@ def export_xlsx(
         "Sale price",
         "Sale currency",
     ]
-    if show_purchase:
-        headers += ["Purchase price", "Purchase currency", "Value"]
     headers += ["Notes", "Last movement"]
     ws.append(headers)
     for c in ws[1]:
@@ -634,9 +646,6 @@ def export_xlsx(
             it.sale_price,
             it.sale_currency,
         ]
-        if show_purchase:
-            value = it.purchase_price * it.quantity if it.purchase_price is not None else None
-            row += [it.purchase_price, it.purchase_currency, value]
         row += [it.notes, _naive(it.last_movement_at)]
         ws.append(row)
 

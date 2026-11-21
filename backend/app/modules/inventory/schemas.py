@@ -48,44 +48,50 @@ class LocationOut(BaseModel):
 # --- items -----------------------------------------------------------------------------
 
 
-class ItemBase(BaseModel):
-    kind: ItemKind
-    name: str = Field(min_length=1, max_length=200)
+class StockItemCreateIn(BaseModel):
+    """Two ways in. From the catalog: `catalog_item_id` — kind and codes come from the card.
+    Not in the catalog: `kind` + `brand` (from the brand list) + `code`; the item is put on
+    the shelf right away and goes to the admin's review. `name` ("what you call it") is
+    optional either way."""
+
+    catalog_item_id: uuid.UUID | None = None
+    kind: ItemKind | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=200)
     brand: str | None = Field(default=None, max_length=80)
     code: str | None = Field(default=None, max_length=64)
-    vehicles: str | None = Field(default=None, max_length=500)
     frequency_mhz: Decimal | None = Field(default=None, ge=0, le=9999)
     chip_type: str | None = Field(default=None, max_length=64)
     fcc_id: str | None = Field(default=None, max_length=32)
-    purchase_price: Decimal | None = PriceField
-    purchase_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    attributes: dict[str, Any] = Field(default_factory=dict)
+
     sale_price: Decimal | None = PriceField
     sale_currency: str | None = Field(default=None, min_length=3, max_length=3)
     min_quantity: int = Field(default=0, ge=0, le=1_000_000)
     notes: str | None = Field(default=None, max_length=5000)
-
-    _cur = field_validator("purchase_currency", "sale_currency")(_upper)
-
-
-class StockItemCreateIn(ItemBase):
-    catalog_item_id: uuid.UUID | None = None
     public_visible: bool = False
     quantity: int = Field(default=0, ge=0, le=1_000_000)
     location_id: uuid.UUID | None = None
     stale: bool = False
 
+    _cur = field_validator("sale_currency")(_upper)
+
+
+# Fields that belong to the catalog card: locked while the item is linked to it.
+CATALOG_FIELDS = {"kind", "brand", "code", "frequency_mhz", "chip_type", "fcc_id", "attributes"}
+
 
 class StockItemUpdateIn(BaseModel):
+    # Always editable; empty = back to the catalog name.
+    name: str | None = Field(default=None, max_length=200)
+    # Only for items not linked to the catalog (see CATALOG_FIELDS).
     kind: ItemKind | None = None
-    name: str | None = Field(default=None, min_length=1, max_length=200)
     brand: str | None = Field(default=None, max_length=80)
     code: str | None = Field(default=None, max_length=64)
-    vehicles: str | None = Field(default=None, max_length=500)
     frequency_mhz: Decimal | None = Field(default=None, ge=0, le=9999)
     chip_type: str | None = Field(default=None, max_length=64)
     fcc_id: str | None = Field(default=None, max_length=32)
-    purchase_price: Decimal | None = PriceField
-    purchase_currency: str | None = Field(default=None, min_length=3, max_length=3)
+    attributes: dict[str, Any] | None = None
+    # Always editable.
     sale_price: Decimal | None = PriceField
     sale_currency: str | None = Field(default=None, min_length=3, max_length=3)
     min_quantity: int | None = Field(default=None, ge=0, le=1_000_000)
@@ -93,7 +99,7 @@ class StockItemUpdateIn(BaseModel):
     stale: bool | None = None
     public_visible: bool | None = None
 
-    _cur = field_validator("purchase_currency", "sale_currency")(_upper)
+    _cur = field_validator("sale_currency")(_upper)
 
 
 class LevelOut(BaseModel):
@@ -104,13 +110,18 @@ class LevelOut(BaseModel):
 class StockItemOut(BaseModel):
     id: uuid.UUID
     kind: str
-    name: str
+    name: str  # the catalog name when linked, otherwise the workshop's name
+    # The workshop's own name of a linked item, when it differs from the catalog name.
+    my_name: str | None
+    # linked | pending (waits for the admin) | rejected | none
+    catalog_status: str
     brand: str | None
     code: str | None
     vehicles: str | None
     frequency_mhz: Decimal | None
     chip_type: str | None
     fcc_id: str | None
+    attributes: dict[str, Any]  # the card's when linked
     quantity: int
     min_quantity: int
     needs_reorder: bool
@@ -118,10 +129,6 @@ class StockItemOut(BaseModel):
     sale_price: Decimal | None
     sale_currency: str | None
     sale_price_in_base: Decimal | None  # converted with the workshop's rate
-    # None + purchase_price_hidden=true for masters who may not see purchase prices.
-    purchase_price: Decimal | None
-    purchase_currency: str | None
-    purchase_price_hidden: bool
     catalog_item: ItemBriefOut | None
     notes: str | None
     has_photo: bool
@@ -143,7 +150,7 @@ class StockItemCreatedOut(StockItemOut):
 
 
 class CatalogLinkIn(BaseModel):
-    catalog_item_id: uuid.UUID | None
+    catalog_item_id: uuid.UUID
 
 
 # --- movements -------------------------------------------------------------------------
@@ -207,20 +214,6 @@ class RateOut(BaseModel):
     currency: str
     rate: Decimal
     updated_at: datetime
-
-
-class ValueByCurrency(BaseModel):
-    currency: str
-    amount: Decimal
-    items: int
-
-
-class StockValueOut(BaseModel):
-    base_currency: str
-    total_in_base: Decimal
-    by_currency: list[ValueByCurrency]
-    currencies_without_rate: list[str]
-    items_without_purchase_price: int
 
 
 class InventoryAuditOut(BaseModel):

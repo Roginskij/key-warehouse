@@ -30,7 +30,7 @@ from app.modules.workshops.service import create_workshop
 EMAIL = "demo@example.com"
 OUT = Path(__file__).resolve().parents[1] / "dev-accounts.local.md"
 
-# name, kind, brand, code, qty, min, purchase (price, cur), sale UAH, vehicles, place
+# name, kind, brand, code, qty, min, sale UAH, vehicles, place
 ITEMS = [
     (
         "Заготовка VW / Audi",
@@ -39,7 +39,6 @@ ITEMS = [
         "HU66",
         14,
         5,
-        ("1.50", "USD"),
         "120",
         "VW Golf 4, Passat B5, Audi A4",
         "box1",
@@ -51,7 +50,6 @@ ITEMS = [
         "SIP22",
         7,
         3,
-        ("1.20", "USD"),
         "110",
         "Fiat Doblo, Punto",
         "box1",
@@ -63,7 +61,6 @@ ITEMS = [
         "VA2",
         2,
         4,
-        ("1.30", "USD"),
         "110",
         "Renault Kangoo, Megane",
         "box1",
@@ -75,7 +72,6 @@ ITEMS = [
         "TOY43",
         9,
         3,
-        ("1.40", "USD"),
         "120",
         "Toyota Corolla, Camry",
         "box2",
@@ -87,7 +83,6 @@ ITEMS = [
         "FO-21D",
         6,
         3,
-        ("38", "UAH"),
         "110",
         "Ford Focus, Transit",
         "box2",
@@ -99,7 +94,6 @@ ITEMS = [
         "HU100",
         0,
         3,
-        ("1.50", "USD"),
         "120",
         "Opel Astra H, Zafira B",
         "box2",
@@ -111,7 +105,6 @@ ITEMS = [
         "FO21-R",
         2,
         3,
-        ("250", "UAH"),
         "800",
         "Ford Focus 2",
         "car",
@@ -123,12 +116,11 @@ ITEMS = [
         "1J0959753",
         3,
         2,
-        ("14", "USD"),
         "1500",
         "VW Golf 4, Passat B5",
         "car",
     ),
-    ("Чип ID46", "transponder", None, "ID46", 1, 5, ("90", "UAH"), "350", None, "shelf"),
+    ("Чип ID46", "transponder", None, "ID46", 1, 5, "350", None, "shelf"),
     (
         "Чип ID48",
         "transponder",
@@ -136,7 +128,6 @@ ITEMS = [
         "ID48",
         6,
         3,
-        ("110", "UAH"),
         "400",
         "VW, Audi, Skoda",
         "shelf",
@@ -148,12 +139,11 @@ ITEMS = [
         "TOY43-2B",
         4,
         0,
-        ("70", "UAH"),
         "280",
         "Toyota",
         "shelf",
     ),
-    ("Батарейка CR2032", "battery", None, "CR2032", 25, 10, ("8", "UAH"), "40", None, "shelf"),
+    ("Батарейка CR2032", "battery", None, "CR2032", 25, 10, "40", None, "shelf"),
 ]
 
 
@@ -206,14 +196,12 @@ async def run(reset: bool) -> None:
         session.add(CurrencyRate(workshop_id=workshop.id, currency="USD", rate=Decimal("41.5")))
 
         created = []
-        for name, kind, brand, code, qty, min_q, (pp, pcur), sale, cars, place in ITEMS:
+        for name, kind, brand, code, qty, min_q, sale, cars, place in ITEMS:
             item = InventoryItem(
                 workshop_id=workshop.id,
                 kind=kind,
                 name=name,
                 vehicles=cars,
-                purchase_price=Decimal(pp),
-                purchase_currency=pcur,
                 sale_price=Decimal(sale),
                 sale_currency="UAH",
                 min_quantity=min_q,

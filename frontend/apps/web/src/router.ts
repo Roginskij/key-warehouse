@@ -29,18 +29,18 @@ const router = createRouter({
         { path: 'verify-email', name: 'verify', component: () => import('@/pages/auth/VerifyEmailPage.vue') },
         { path: 'reset-password', name: 'reset', component: () => import('@/pages/auth/ResetPage.vue') },
         { path: 'invite', name: 'invite', component: () => import('@/pages/auth/InvitePage.vue') },
+        { path: 'staff-invite', name: 'staff-invite', component: () => import('@/pages/auth/StaffInvitePage.vue') },
       ],
     },
     {
       path: '/',
       component: () => import('@/layouts/AppShell.vue'),
-      meta: { auth: true },
+      meta: { auth: true, app: true },
       children: [
         { path: 'stock', name: 'stock', component: () => import('@/pages/app/StockPage.vue') },
         { path: 'stock/new', name: 'item-new', component: () => import('@/pages/app/ItemFormPage.vue') },
         { path: 'stock/:id', name: 'item', component: () => import('@/pages/app/ItemPage.vue'), props: true },
         { path: 'stock/:id/edit', name: 'item-edit', component: () => import('@/pages/app/ItemFormPage.vue'), props: true },
-        { path: 'value', name: 'value', component: () => import('@/pages/app/ValuePage.vue') },
         { path: 'reorder', name: 'reorder', component: () => import('@/pages/app/ReorderPage.vue') },
         { path: 'locations/labels', name: 'labels', component: () => import('@/pages/app/LabelsPage.vue') },
         { path: 'l/:wid/:lid', name: 'sticker', component: () => import('@/pages/app/StickerPage.vue'), props: true },
@@ -63,8 +63,11 @@ const router = createRouter({
         { path: 'proposals', name: 'admin-proposals', component: () => import('@/pages/admin/ProposalsPage.vue'), meta: { perms: CATALOG } },
         { path: 'import', name: 'admin-import', component: () => import('@/pages/admin/CatalogImportPage.vue'), meta: { perms: ['catalog.import'] } },
         { path: 'brands', name: 'admin-brands', component: () => import('@/pages/admin/BrandsPage.vue'), meta: { perms: CATALOG } },
+        { path: 'attributes', name: 'admin-attributes', component: () => import('@/pages/admin/AttributesPage.vue'), meta: { perms: ['catalog.attributes'] } },
         { path: 'history', name: 'admin-history', component: () => import('@/pages/admin/HistoryPage.vue'), meta: { perms: CATALOG } },
         { path: 'users', name: 'admin-users', component: () => import('@/pages/admin/UsersPage.vue'), meta: { perms: ['users.view'] } },
+        { path: 'workshops', name: 'admin-workshops', component: () => import('@/pages/admin/WorkshopsPage.vue'), meta: { perms: ['workshops.view'] } },
+        { path: 'workshops/:id', name: 'admin-workshop', component: () => import('@/pages/admin/WorkshopPage.vue'), props: true, meta: { perms: ['workshops.view'] } },
         { path: 'waitlist', name: 'admin-waitlist', component: () => import('@/pages/admin/WaitlistPage.vue'), meta: { perms: ['users.view'] } },
       ],
     },
@@ -81,6 +84,11 @@ router.beforeEach(async (to) => {
   }
   if (to.matched.some((r) => r.meta.guest) && session.isLoggedIn) return { name: 'stock' }
   if (to.matched.some((r) => r.meta.admin) && !session.isAdmin) return { name: 'stock' }
+  // KeyVerhaus staff have no workshop: the stock part is not for them, the admin is home.
+  // "more" stays open — password, language, own data.
+  if (to.matched.some((r) => r.meta.app) && to.name !== 'more' && session.isAdmin && !session.workshops.length) {
+    return { name: 'admin' }
+  }
   const perms = to.meta.perms as string[] | undefined
   if (perms && !session.can(...perms)) return { name: 'admin' }
 })

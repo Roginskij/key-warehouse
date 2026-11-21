@@ -32,7 +32,6 @@ async def create_workshop(
         workshop_id=workshop.id,
         user_id=owner.id,
         role=WorkshopRole.OWNER,
-        can_see_purchase_prices=True,
     )
     session.add(membership)
     await session.flush()

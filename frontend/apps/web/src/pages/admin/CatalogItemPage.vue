@@ -12,6 +12,29 @@
 
   <div v-else-if="item" class="grid gap-4 p-3 md:p-0 md:pb-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
     <div class="flex flex-col gap-4">
+      <!-- What the public site needs -->
+      <section
+        v-if="item.status === 'active'"
+        class="flex flex-col gap-2 rounded-card border-2 p-4"
+        :class="onSite ? 'border-line bg-surface' : 'border-ink bg-primary-soft'"
+      >
+        <div class="flex items-start gap-3">
+          <UIIcon :name="onSite ? 'check' : 'globe'" :size="22" class="mt-0.5 shrink-0" />
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <b class="text-[16px]">{{ onSite ? t('admin.item.onSite') : t('admin.item.notOnSite') }}</b>
+            <ul class="m-0 flex flex-col gap-0.5 p-0 text-[15px]">
+              <li class="flex list-none items-center gap-2">
+                <UIIcon :name="onSite ? 'check' : 'close'" :size="16" :class="onSite ? '' : 'text-danger'" />{{ t('admin.item.needContent') }}
+              </li>
+              <li class="flex list-none items-center gap-2">
+                <UIIcon :name="item.images.length ? 'check' : 'close'" :size="16" :class="item.images.length ? '' : 'text-muted'" />{{ t('admin.item.needPhoto') }}
+              </li>
+            </ul>
+            <a v-if="onSite && item.slug" :href="`${shopUrl}/uk/keys/${item.slug}`" target="_blank" rel="noopener" class="self-start text-[15px] font-semibold text-ink">{{ t('admin.item.openOnSite') }} ↗</a>
+          </div>
+        </div>
+      </section>
+
       <p v-if="item.status === 'merged' && item.merged_into_id" class="m-0 rounded-card border border-line bg-warn-bg p-4 text-warn">
         {{ t('admin.item.mergedInto') }}
         <RouterLink :to="{ name: 'admin-item', params: { id: item.merged_into_id } }" class="font-bold text-warn">{{ t('admin.item.open') }}</RouterLink>
@@ -103,17 +126,19 @@
             <UIField v-model="form.chip_type" :label="t('item.form.chip')" />
             <UIField v-model="form.fcc_id" label="FCC ID" />
           </div>
+          <div class="flex flex-col gap-3 border-t border-ground pt-3">
+            <span class="flex items-center justify-between gap-2">
+              <span class="text-[15px] font-bold">{{ t('attrs.title') }}</span>
+              <RouterLink v-if="session.can('catalog.attributes')" :to="{ name: 'admin-attributes' }" class="text-[14px] font-semibold text-ink">{{ t('admin.attrs.manage') }}</RouterLink>
+            </span>
+            <AttributesEditor v-model="form.attributes" :kind="form.kind" :error="attrError" />
+          </div>
         </fieldset>
         <div v-if="canEdit && item.status !== 'merged'" class="flex flex-wrap gap-2">
           <UIButton type="submit">{{ t('common.save') }}</UIButton>
           <UIButton v-if="item.status === 'active'" variant="danger" @click="setStatus('archived')">{{ t('admin.item.archive') }}</UIButton>
           <UIButton v-else variant="outline" @click="setStatus('active')">{{ t('admin.item.restore') }}</UIButton>
         </div>
-        <p v-if="item.slug" class="m-0 text-[14px]">
-          {{ t('admin.item.publicPage') }}:
-          <a :href="`${shopUrl}/uk/keys/${item.slug}`" target="_blank" rel="noopener" class="font-semibold text-ink">/keys/{{ item.slug }}</a>
-          <span class="block text-[13px] text-muted">{{ t('admin.item.publicPageHint') }}</span>
-        </p>
         <p class="m-0 text-[13px] text-muted">
           {{ t(`admin.source.${item.source_type}`) }}<template v-if="item.source_ref && !item.source_ref.startsWith('proposal:')"> · {{ item.source_ref }}</template> · {{ dateTime(item.created_at) }}
         </p>
@@ -157,12 +182,13 @@
 </template>
 
 <script setup lang="ts">
-import type { Schemas } from '@kv/api'
+import { ApiError, type Schemas } from '@kv/api'
 import { UIButton, UIField, UIIcon, UISelect } from '@kv/ui'
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ItemPicker from '@/components/admin/ItemPicker.vue'
+import AttributesEditor from '@/components/AttributesEditor.vue'
 import ItemPublicSections from '@/components/admin/ItemPublicSections.vue'
 import LoadError from '@/components/LoadError.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -171,6 +197,7 @@ import { KINDS, useBrands } from '@/lib/admin'
 import { call, client } from '@/lib/api'
 import { errorText } from '@/lib/errors'
 import { dateTime } from '@/lib/format'
+import type { Attributes } from '@/lib/queries'
 import { useSession } from '@/stores/session'
 import { useToast } from '@/stores/toast'
 
@@ -185,6 +212,8 @@ const qc = useQueryClient()
 const canEdit = computed(() => session.can('catalog.edit'))
 const { data: brands } = useBrands()
 const shopUrl = import.meta.env.VITE_SHOP_URL ?? 'http://localhost:3000'
+// Same rule as the public site: a description or at least one car/lock fit.
+const onSite = computed(() => !!item.value && (!!item.value.description?.trim() || item.value.vehicle_fits.length > 0 || item.value.lock_fits.length > 0))
 
 const key = computed(() => ['admin-item', props.id])
 const { data: item, isPending, isError, error, refetch } = useQuery({
@@ -214,7 +243,8 @@ async function act(fn: () => Promise<Detail>, message?: string) {
 const itemPath = computed(() => ({ item_id: props.id }))
 
 // --- fields
-const form = ref({ kind: 'blank', name: '', description: '', frequency_mhz: '', chip_type: '', fcc_id: '' })
+const form = ref({ kind: 'blank', name: '', description: '', frequency_mhz: '', chip_type: '', fcc_id: '', attributes: {} as Attributes })
+const attrError = ref<string | null>(null)
 watch(
   item,
   (it) => {
@@ -226,30 +256,36 @@ watch(
       frequency_mhz: it.frequency_mhz ?? '',
       chip_type: it.chip_type ?? '',
       fcc_id: it.fcc_id ?? '',
+      attributes: { ...(it.attributes ?? {}) },
     }
   },
   { immediate: true },
 )
 const kindOptions = computed(() => KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`) })))
 const txt = (v: string) => (v.trim() ? v.trim() : null)
-function saveFields() {
-  return act(
-    () =>
-      call(
-        client.PATCH('/api/v1/admin/catalog/items/{item_id}', {
-          params: { path: itemPath.value },
-          body: {
-            kind: form.value.kind as never,
-            name: form.value.name.trim(),
-            description: txt(form.value.description),
-            frequency_mhz: txt(form.value.frequency_mhz.replace(',', '.')),
-            chip_type: txt(form.value.chip_type),
-            fcc_id: txt(form.value.fcc_id),
-          },
-        }),
-      ),
-    t('admin.item.saved'),
-  )
+async function saveFields() {
+  attrError.value = null
+  try {
+    const updated = await call(
+      client.PATCH('/api/v1/admin/catalog/items/{item_id}', {
+        params: { path: itemPath.value },
+        body: {
+          kind: form.value.kind as never,
+          name: form.value.name.trim(),
+          description: txt(form.value.description),
+          frequency_mhz: txt(form.value.frequency_mhz.replace(',', '.')),
+          chip_type: txt(form.value.chip_type),
+          fcc_id: txt(form.value.fcc_id),
+          attributes: form.value.attributes,
+        },
+      }),
+    )
+    done(updated, t('admin.item.saved'))
+  } catch (e) {
+    // A wrong characteristic: show it at its field.
+    if (e instanceof ApiError && e.code === 'catalog.bad_attribute') attrError.value = String(e.params.field)
+    toast.error(errorText(e))
+  }
 }
 function setStatus(status: 'active' | 'archived') {
   return act(

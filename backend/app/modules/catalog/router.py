@@ -4,11 +4,12 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Query, status
+from pydantic import BaseModel
 from sqlalchemy import case, func, or_, select
 
 from app.core.deps import CurrentUser, SessionDep
 from app.core.errors import NotFound
-from app.modules.catalog import proposals, service
+from app.modules.catalog import attributes, proposals, service
 from app.modules.catalog.models import (
     Brand,
     CatalogItem,
@@ -59,6 +60,42 @@ async def run_search(session, stmt, order, limit: int, offset: int):
     total = await session.scalar(select(func.count()).select_from(stmt.subquery()))
     rows = await session.scalars(stmt.order_by(*order).limit(limit).offset(offset))
     return rows.all(), total
+
+
+class AttributeOptionOut(BaseModel):
+    key: str
+    labels: dict[str, str]
+
+
+class AttributeFieldOut(BaseModel):
+    key: str
+    type: str
+    labels: dict[str, str]
+    min: int | None
+    max: int | None
+    options: list[AttributeOptionOut]
+
+
+@router.get("/attributes", response_model=dict[str, list[AttributeFieldOut]])
+async def attribute_fields(_: CurrentUser, session: SessionDep):
+    """Characteristics fields per kind, as the admin set them (visible ones only)."""
+    out: dict[str, list[AttributeFieldOut]] = {k.value: [] for k in ItemKind}
+    for d in await attributes.defs_for(session):
+        out.setdefault(d.kind, []).append(
+            AttributeFieldOut(
+                key=d.key,
+                type=d.type,
+                labels=d.labels,
+                min=d.min_value,
+                max=d.max_value,
+                options=[
+                    AttributeOptionOut(key=o.key, labels=o.labels)
+                    for o in d.options
+                    if not o.is_hidden
+                ],
+            )
+        )
+    return out
 
 
 @router.get("/brands", response_model=list[BrandOut])

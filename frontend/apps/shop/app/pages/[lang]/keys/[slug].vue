@@ -20,9 +20,15 @@
           <ul class="m-0 flex flex-wrap gap-2 p-0">
             <li v-for="c in key.codes" :key="c.brand + c.code" class="list-none rounded-control bg-ground px-3 py-1.5"><b>{{ c.code }}</b> <span class="text-muted">{{ c.brand }}</span></li>
           </ul>
-          <dl v-if="key.frequency_mhz || key.chip_type" class="m-0 mt-1 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[15px]">
-            <template v-if="key.frequency_mhz"><dt class="text-muted">{{ t('key.frequency') }}</dt><dd class="m-0">{{ key.frequency_mhz }} MHz</dd></template>
-            <template v-if="key.chip_type"><dt class="text-muted">{{ t('key.chip') }}</dt><dd class="m-0">{{ key.chip_type }}</dd></template>
+        </section>
+
+        <section v-if="specs.length" class="flex flex-col gap-2 rounded-card border border-line bg-surface p-4">
+          <h2 class="m-0 text-[17px] font-bold">{{ t('attrs.title') }}</h2>
+          <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[15px]">
+            <template v-for="s in specs" :key="s.label">
+              <dt class="text-muted">{{ s.label }}</dt>
+              <dd class="m-0 font-semibold">{{ s.value }}</dd>
+            </template>
           </dl>
         </section>
 
@@ -105,6 +111,21 @@ const city = ref(typeof route.query.city === 'string' ? route.query.city : '')
 const cityOptions = computed(() => [{ value: '', label: t('key.allCities') }, ...(cities.value ?? []).map((c) => ({ value: c, label: c }))])
 const shown = computed(() => (workshops.value ?? []).filter((w) => !city.value || (w.city ?? '').toLowerCase() === city.value.toLowerCase()))
 
+// Characteristics: frequency and chip have their own fields, the rest comes with labels
+// in every language from the admin's list.
+const pick = (labels: Record<string, string> | null | undefined) => labels?.[lang.value] || labels?.en || labels?.uk || ''
+const specs = computed(() => {
+  const k = key.value
+  const rows: { label: string; value: string }[] = []
+  if (k.frequency_mhz) rows.push({ label: t('key.frequency'), value: `${k.frequency_mhz} MHz` })
+  if (k.chip_type) rows.push({ label: t('key.chip'), value: k.chip_type })
+  for (const c of k.characteristics as { labels: Record<string, string>; value: unknown; value_labels: Record<string, string> | null }[]) {
+    const value = typeof c.value === 'boolean' ? t(c.value ? 'attrs.yes' : 'attrs.no') : pick(c.value_labels) || String(c.value)
+    rows.push({ label: pick(c.labels), value })
+  }
+  return rows
+})
+
 // --- SEO
 const absolute = useAbsoluteUrl()
 const codes = computed(() => key.value.codes.map((c) => c.code).filter((c, i, a) => a.indexOf(c) === i).join(', '))
@@ -134,7 +155,10 @@ useHead({
             category: t(`kinds.${key.value.kind}`),
             image: key.value.images.map((i) => absolute(i.url)),
             // Codes are compatibility references, not a claim of the manufacturer's product.
-            additionalProperty: key.value.codes.map((c) => ({ '@type': 'PropertyValue', name: c.brand, value: c.code })),
+            additionalProperty: [
+              ...key.value.codes.map((c) => ({ '@type': 'PropertyValue', name: c.brand, value: c.code })),
+              ...specs.value.map((s) => ({ '@type': 'PropertyValue', name: s.label, value: s.value })),
+            ],
             isAccessoryOrSparePartFor: key.value.vehicles.map((v) => ({ '@type': 'Car', brand: v.make, model: v.model })),
           },
           {

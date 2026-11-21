@@ -559,6 +559,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attribute Fields
+         * @description Characteristics fields per kind, as the admin set them (visible ones only).
+         */
+        get: operations["attribute_fields_api_v1_catalog_attributes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/brands": {
         parameters: {
             query?: never;
@@ -1111,7 +1131,11 @@ export interface paths {
         /** List Items */
         get: operations["list_items_api_v1_workshops__workshop_id__inventory_items_get"];
         put?: never;
-        /** Create Item */
+        /**
+         * Create Item
+         * @description From the catalog (catalog_item_id) or, if the key is not there, kind + name +
+         *     brand from the list + number: such an item works at once and goes to the admin.
+         */
         post: operations["create_item_api_v1_workshops__workshop_id__inventory_items_post"];
         delete?: never;
         options?: never;
@@ -1249,26 +1273,6 @@ export interface paths {
          * @description 'Time to order': quantity below the minimum. Biggest shortage first.
          */
         get: operations["reorder_list_api_v1_workshops__workshop_id__inventory_reorder_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workshops/{workshop_id}/inventory/value": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Stock Value
-         * @description How much money lies on the shelves (purchase prices).
-         */
-        get: operations["stock_value_api_v1_workshops__workshop_id__inventory_value_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1427,6 +1431,268 @@ export interface paths {
          * @description Owner only. public_listed = consent to appear in the public search.
          */
         put: operations["set_profile_api_v1_workshops__workshop_id__profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/todo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Todo */
+        get: operations["todo_api_v1_admin_todo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/todo/duplicates/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Duplicate
+         * @description "These are different keys" — the pair is not suggested again.
+         */
+        post: operations["dismiss_duplicate_api_v1_admin_todo_duplicates_dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Fields */
+        get: operations["list_fields_api_v1_admin_catalog_attributes_get"];
+        put?: never;
+        /** Create Field */
+        post: operations["create_field_api_v1_admin_catalog_attributes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/attributes/{field_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Field */
+        delete: operations["delete_field_api_v1_admin_catalog_attributes__field_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Field */
+        patch: operations["update_field_api_v1_admin_catalog_attributes__field_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/attributes/order/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Order Fields */
+        put: operations["order_fields_api_v1_admin_catalog_attributes_order__kind__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/attributes/{field_id}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Option */
+        post: operations["add_option_api_v1_admin_catalog_attributes__field_id__options_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/attributes/options/{option_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Option */
+        delete: operations["delete_option_api_v1_admin_catalog_attributes_options__option_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Option */
+        patch: operations["update_option_api_v1_admin_catalog_attributes_options__option_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/attributes/{field_id}/options/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Order Options */
+        put: operations["order_options_api_v1_admin_catalog_attributes__field_id__options_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/staff-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending Invitations */
+        get: operations["pending_invitations_api_v1_admin_staff_invitations_get"];
+        put?: never;
+        /** Invite Staff */
+        post: operations["invite_staff_api_v1_admin_staff_invitations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/staff-invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Staff Invitation */
+        delete: operations["revoke_staff_invitation_api_v1_admin_staff_invitations__invitation_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff-invitations/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview */
+        post: operations["preview_api_v1_staff_invitations_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff-invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept */
+        post: operations["accept_api_v1_staff_invitations_accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workshops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Workshops */
+        get: operations["list_workshops_api_v1_admin_workshops_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workshops/{workshop_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Workshop */
+        get: operations["get_workshop_api_v1_admin_workshops__workshop_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workshops/{workshop_id}/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workshop Stock */
+        get: operations["workshop_stock_api_v1_admin_workshops__workshop_id__stock_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1654,7 +1920,105 @@ export interface components {
          *     and is the only one who can grant them.
          * @enum {string}
          */
-        AdminPerm: "users.view" | "users.manage" | "catalog.view" | "catalog.edit" | "catalog.moderate" | "catalog.import";
+        AdminPerm: "users.view" | "users.manage" | "catalog.view" | "catalog.edit" | "catalog.moderate" | "catalog.import" | "catalog.attributes" | "workshops.view";
+        /** AdminWorkshopDetail */
+        AdminWorkshopDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Country */
+            country: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Members */
+            members: number;
+            /** Items */
+            items: number;
+            /** Last Activity */
+            last_activity: string | null;
+            /** Public Listed */
+            public_listed: boolean;
+            /** Verification Status */
+            verification_status: string;
+            /** City */
+            city: string | null;
+            /** Tax Id */
+            tax_id: string | null;
+            /** Members List */
+            members_list: components["schemas"]["app__modules__admin__workshops__MemberOut"][];
+        };
+        /** AdminWorkshopOut */
+        AdminWorkshopOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Country */
+            country: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Members */
+            members: number;
+            /** Items */
+            items: number;
+            /** Last Activity */
+            last_activity: string | null;
+            /** Public Listed */
+            public_listed: boolean;
+            /** Verification Status */
+            verification_status: string;
+        };
+        /** AdminWorkshopPage */
+        AdminWorkshopPage: {
+            /** Items */
+            items: components["schemas"]["AdminWorkshopOut"][];
+            /** Total */
+            total: number;
+        };
+        /** AttributeFieldOut */
+        AttributeFieldOut: {
+            /** Key */
+            key: string;
+            /** Type */
+            type: string;
+            /** Labels */
+            labels: {
+                [key: string]: string;
+            };
+            /** Min */
+            min: number | null;
+            /** Max */
+            max: number | null;
+            /** Options */
+            options: components["schemas"]["AttributeOptionOut"][];
+        };
+        /** AttributeOptionOut */
+        AttributeOptionOut: {
+            /** Key */
+            key: string;
+            /** Labels */
+            labels: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * AttributeType
+         * @enum {string}
+         */
+        AttributeType: "select" | "number" | "bool";
         /** AuditOut */
         AuditOut: {
             /**
@@ -1767,8 +2131,11 @@ export interface components {
         };
         /** CatalogLinkIn */
         CatalogLinkIn: {
-            /** Catalog Item Id */
-            catalog_item_id: string | null;
+            /**
+             * Catalog Item Id
+             * Format: uuid
+             */
+            catalog_item_id: string;
         };
         /** ChangePasswordIn */
         ChangePasswordIn: {
@@ -1889,6 +2256,28 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** DismissIn */
+        DismissIn: {
+            /** Item Ids */
+            item_ids: string[];
+        };
+        /** DuplicateList */
+        DuplicateList: {
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["DuplicatePair"][];
+        };
+        /** DuplicatePair */
+        DuplicatePair: {
+            a: components["schemas"]["TodoItem"];
+            b: components["schemas"]["TodoItem"];
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "name" | "code";
+        };
         /** EmailIn */
         EmailIn: {
             /**
@@ -1912,6 +2301,63 @@ export interface components {
             kind?: components["schemas"]["ItemKind"] | null;
             /** Name */
             name?: string | null;
+        };
+        /** FieldAdminOut */
+        FieldAdminOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Key */
+            key: string;
+            /** Type */
+            type: string;
+            /** Labels */
+            labels: {
+                [key: string]: string;
+            };
+            /** Min Value */
+            min_value: number | null;
+            /** Max Value */
+            max_value: number | null;
+            /** Is Hidden */
+            is_hidden: boolean;
+            /** Used */
+            used: number;
+            /** Options */
+            options: components["schemas"]["OptionAdminOut"][];
+        };
+        /** FieldIn */
+        FieldIn: {
+            kind: components["schemas"]["ItemKind"];
+            type: components["schemas"]["AttributeType"];
+            /** Labels */
+            labels: {
+                [key: string]: string;
+            };
+            /** Min Value */
+            min_value?: number | null;
+            /** Max Value */
+            max_value?: number | null;
+            /** Options */
+            options?: components["schemas"]["OptionIn"][];
+        };
+        /** FieldUpdateIn */
+        FieldUpdateIn: {
+            /** Labels */
+            labels?: {
+                [key: string]: string;
+            } | null;
+            type?: components["schemas"]["AttributeType"] | null;
+            /** Min Value */
+            min_value?: number | null;
+            /** Max Value */
+            max_value?: number | null;
+            /** Is Hidden */
+            is_hidden?: boolean | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -2023,11 +2469,6 @@ export interface components {
             email: string;
             /** @default master */
             role: components["schemas"]["WorkshopRole"];
-            /**
-             * Can See Purchase Prices
-             * @default false
-             */
-            can_see_purchase_prices: boolean;
         };
         /** InvitationOut */
         InvitationOut: {
@@ -2040,8 +2481,6 @@ export interface components {
             email: string;
             /** Role */
             role: string;
-            /** Can See Purchase Prices */
-            can_see_purchase_prices: boolean;
             /**
              * Expires At
              * Format: date-time
@@ -2438,37 +2877,9 @@ export interface components {
             /** Workshops */
             workshops: components["schemas"]["MyMembershipOut"][];
         };
-        /** MemberOut */
-        MemberOut: {
-            /**
-             * Membership Id
-             * Format: uuid
-             */
-            membership_id: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
-            /** Email */
-            email: string;
-            /** Full Name */
-            full_name: string;
-            /** Role */
-            role: string;
-            /** Can See Purchase Prices */
-            can_see_purchase_prices: boolean;
-            /**
-             * Joined At
-             * Format: date-time
-             */
-            joined_at: string;
-        };
         /** MemberUpdateIn */
         MemberUpdateIn: {
             role?: components["schemas"]["WorkshopRole"] | null;
-            /** Can See Purchase Prices */
-            can_see_purchase_prices?: boolean | null;
         };
         /** MergeIn */
         MergeIn: {
@@ -2599,8 +3010,6 @@ export interface components {
             workshop_name: string;
             /** Role */
             role: string;
-            /** Sees Purchase Prices */
-            sees_purchase_prices: boolean;
         };
         /** MyWorkshopOut */
         MyWorkshopOut: {
@@ -2626,8 +3035,6 @@ export interface components {
             created_at: string;
             /** My Role */
             my_role: string;
-            /** Sees Purchase Prices */
-            sees_purchase_prices: boolean;
         };
         /** NewItemProposal */
         NewItemProposal: {
@@ -2647,6 +3054,49 @@ export interface components {
             chip_type?: string | null;
             /** Fcc Id */
             fcc_id?: string | null;
+            /** Attributes */
+            attributes?: {
+                [key: string]: unknown;
+            };
+        };
+        /** OptionAdminOut */
+        OptionAdminOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Labels */
+            labels: {
+                [key: string]: string;
+            };
+            /** Is Hidden */
+            is_hidden: boolean;
+            /** Used */
+            used: number;
+        };
+        /** OptionIn */
+        OptionIn: {
+            /** Labels */
+            labels: {
+                [key: string]: string;
+            };
+        };
+        /** OptionUpdateIn */
+        OptionUpdateIn: {
+            /** Labels */
+            labels?: {
+                [key: string]: string;
+            } | null;
+            /** Is Hidden */
+            is_hidden?: boolean | null;
+        };
+        /** OrderIn */
+        OrderIn: {
+            /** Ids */
+            ids: string[];
         };
         /** PermissionsIn */
         PermissionsIn: {
@@ -2729,9 +3179,50 @@ export interface components {
         };
         /** ProposalAcceptIn */
         ProposalAcceptIn: {
+            /** Attach To */
+            attach_to?: string | null;
             kind?: components["schemas"]["ItemKind"] | null;
             /** Name */
             name?: string | null;
+        };
+        /** ProposalAdminOut */
+        ProposalAdminOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Type */
+            type: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Status */
+            status: string;
+            /** Votes Count */
+            votes_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decision Note */
+            decision_note: string | null;
+            /** Result Item Id */
+            result_item_id: string | null;
+            /**
+             * Suggestions
+             * @default []
+             */
+            suggestions: components["schemas"]["ItemBriefOut"][];
+            /**
+             * Stock Count
+             * @default 0
+             */
+            stock_count: number;
         };
         /** ProposalOut */
         ProposalOut: {
@@ -2765,7 +3256,7 @@ export interface components {
         /** ProposalPage */
         ProposalPage: {
             /** Items */
-            items: components["schemas"]["ProposalOut"][];
+            items: components["schemas"]["ProposalAdminOut"][];
             /** Total */
             total: number;
         };
@@ -2828,6 +3319,10 @@ export interface components {
             frequency_mhz: string | null;
             /** Chip Type */
             chip_type: string | null;
+            /** Characteristics */
+            characteristics: {
+                [key: string]: unknown;
+            }[];
             /** Vehicles */
             vehicles: {
                 [key: string]: unknown;
@@ -2989,27 +3484,88 @@ export interface components {
             /** Name */
             name?: string | null;
         };
-        /** StockItemCreateIn */
+        /** StaffAcceptIn */
+        StaffAcceptIn: {
+            /** Token */
+            token: string;
+            /** Full Name */
+            full_name: string;
+            /** Password */
+            password: string;
+            /** Locale */
+            locale?: string | null;
+            /**
+             * Accept Terms
+             * @default false
+             */
+            accept_terms: boolean;
+        };
+        /** StaffInvitationOut */
+        StaffInvitationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+            /** Permissions */
+            permissions: string[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** StaffInviteIn */
+        StaffInviteIn: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Permissions */
+            permissions: components["schemas"]["AdminPerm"][];
+        };
+        /** StaffPreviewOut */
+        StaffPreviewOut: {
+            /** Email */
+            email: string;
+            /** Permissions */
+            permissions: string[];
+        };
+        /**
+         * StockItemCreateIn
+         * @description Two ways in. From the catalog: `catalog_item_id` — kind and codes come from the card.
+         *     Not in the catalog: `kind` + `brand` (from the brand list) + `code`; the item is put on
+         *     the shelf right away and goes to the admin's review. `name` ("what you call it") is
+         *     optional either way.
+         */
         StockItemCreateIn: {
-            kind: components["schemas"]["ItemKind"];
+            /** Catalog Item Id */
+            catalog_item_id?: string | null;
+            kind?: components["schemas"]["ItemKind"] | null;
             /** Name */
-            name: string;
+            name?: string | null;
             /** Brand */
             brand?: string | null;
             /** Code */
             code?: string | null;
-            /** Vehicles */
-            vehicles?: string | null;
             /** Frequency Mhz */
             frequency_mhz?: number | string | null;
             /** Chip Type */
             chip_type?: string | null;
             /** Fcc Id */
             fcc_id?: string | null;
-            /** Purchase Price */
-            purchase_price?: number | string | null;
-            /** Purchase Currency */
-            purchase_currency?: string | null;
+            /** Attributes */
+            attributes?: {
+                [key: string]: unknown;
+            };
             /** Sale Price */
             sale_price?: number | string | null;
             /** Sale Currency */
@@ -3021,8 +3577,6 @@ export interface components {
             min_quantity: number;
             /** Notes */
             notes?: string | null;
-            /** Catalog Item Id */
-            catalog_item_id?: string | null;
             /**
              * Public Visible
              * @default false
@@ -3052,6 +3606,10 @@ export interface components {
             kind: string;
             /** Name */
             name: string;
+            /** My Name */
+            my_name: string | null;
+            /** Catalog Status */
+            catalog_status: string;
             /** Brand */
             brand: string | null;
             /** Code */
@@ -3064,6 +3622,10 @@ export interface components {
             chip_type: string | null;
             /** Fcc Id */
             fcc_id: string | null;
+            /** Attributes */
+            attributes: {
+                [key: string]: unknown;
+            };
             /** Quantity */
             quantity: number;
             /** Min Quantity */
@@ -3078,12 +3640,6 @@ export interface components {
             sale_currency: string | null;
             /** Sale Price In Base */
             sale_price_in_base: string | null;
-            /** Purchase Price */
-            purchase_price: string | null;
-            /** Purchase Currency */
-            purchase_currency: string | null;
-            /** Purchase Price Hidden */
-            purchase_price_hidden: boolean;
             catalog_item: components["schemas"]["ItemBriefOut"] | null;
             /** Notes */
             notes: string | null;
@@ -3121,6 +3677,10 @@ export interface components {
             kind: string;
             /** Name */
             name: string;
+            /** My Name */
+            my_name: string | null;
+            /** Catalog Status */
+            catalog_status: string;
             /** Brand */
             brand: string | null;
             /** Code */
@@ -3133,6 +3693,10 @@ export interface components {
             chip_type: string | null;
             /** Fcc Id */
             fcc_id: string | null;
+            /** Attributes */
+            attributes: {
+                [key: string]: unknown;
+            };
             /** Quantity */
             quantity: number;
             /** Min Quantity */
@@ -3147,12 +3711,6 @@ export interface components {
             sale_currency: string | null;
             /** Sale Price In Base */
             sale_price_in_base: string | null;
-            /** Purchase Price */
-            purchase_price: string | null;
-            /** Purchase Currency */
-            purchase_currency: string | null;
-            /** Purchase Price Hidden */
-            purchase_price_hidden: boolean;
             catalog_item: components["schemas"]["ItemBriefOut"] | null;
             /** Notes */
             notes: string | null;
@@ -3186,25 +3744,23 @@ export interface components {
         };
         /** StockItemUpdateIn */
         StockItemUpdateIn: {
-            kind?: components["schemas"]["ItemKind"] | null;
             /** Name */
             name?: string | null;
+            kind?: components["schemas"]["ItemKind"] | null;
             /** Brand */
             brand?: string | null;
             /** Code */
             code?: string | null;
-            /** Vehicles */
-            vehicles?: string | null;
             /** Frequency Mhz */
             frequency_mhz?: number | string | null;
             /** Chip Type */
             chip_type?: string | null;
             /** Fcc Id */
             fcc_id?: string | null;
-            /** Purchase Price */
-            purchase_price?: number | string | null;
-            /** Purchase Currency */
-            purchase_currency?: string | null;
+            /** Attributes */
+            attributes?: {
+                [key: string]: unknown;
+            } | null;
             /** Sale Price */
             sale_price?: number | string | null;
             /** Sale Currency */
@@ -3217,19 +3773,6 @@ export interface components {
             stale?: boolean | null;
             /** Public Visible */
             public_visible?: boolean | null;
-        };
-        /** StockValueOut */
-        StockValueOut: {
-            /** Base Currency */
-            base_currency: string;
-            /** Total In Base */
-            total_in_base: string;
-            /** By Currency */
-            by_currency: components["schemas"]["ValueByCurrency"][];
-            /** Currencies Without Rate */
-            currencies_without_rate: string[];
-            /** Items Without Purchase Price */
-            items_without_purchase_price: number;
         };
         /** SubstituteIn */
         SubstituteIn: {
@@ -3261,6 +3804,35 @@ export interface components {
             substitute: components["schemas"]["CodeRef"];
             /** Note */
             note?: string | null;
+        };
+        /** TodoItem */
+        TodoItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Codes */
+            codes: string[];
+            /** Workshops */
+            workshops: number;
+        };
+        /** TodoList */
+        TodoList: {
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["TodoItem"][];
+        };
+        /** TodoOut */
+        TodoOut: {
+            /** Pending Proposals */
+            pending_proposals: number;
+            not_on_site: components["schemas"]["TodoList"];
+            no_photo: components["schemas"]["TodoList"];
+            duplicates: components["schemas"]["DuplicateList"];
         };
         /** TokenIn */
         TokenIn: {
@@ -3341,15 +3913,6 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
-        };
-        /** ValueByCurrency */
-        ValueByCurrency: {
-            /** Currency */
-            currency: string;
-            /** Amount */
-            amount: string;
-            /** Items */
-            items: number;
         };
         /** VehicleFitIn */
         VehicleFitIn: {
@@ -3442,6 +4005,39 @@ export interface components {
          * @enum {string}
          */
         WorkshopRole: "owner" | "master";
+        /** WorkshopStockItem */
+        WorkshopStockItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Kind */
+            kind: string;
+            /** Brand */
+            brand: string | null;
+            /** Code */
+            code: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Min Quantity */
+            min_quantity: number;
+            /** Sale Price */
+            sale_price: string | null;
+            /** Sale Currency */
+            sale_currency: string | null;
+            /** Linked To Catalog */
+            linked_to_catalog: boolean;
+        };
+        /** WorkshopStockPage */
+        WorkshopStockPage: {
+            /** Items */
+            items: components["schemas"]["WorkshopStockItem"][];
+            /** Total */
+            total: number;
+        };
         /** WorkshopUpdateIn */
         WorkshopUpdateIn: {
             /** Name */
@@ -3451,6 +4047,39 @@ export interface components {
             /** Base Currency */
             base_currency?: string | null;
             sharing_level?: components["schemas"]["SharingLevel"] | null;
+        };
+        /** MemberOut */
+        app__modules__admin__workshops__MemberOut: {
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Role */
+            role: string;
+        };
+        /** MemberOut */
+        app__modules__workshops__schemas__MemberOut: {
+            /**
+             * Membership Id
+             * Format: uuid
+             */
+            membership_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /** Role */
+            role: string;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
         };
     };
     responses: never;
@@ -4035,7 +4664,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MemberOut"][];
+                    "application/json": components["schemas"]["app__modules__workshops__schemas__MemberOut"][];
                 };
             };
             /** @description Validation Error */
@@ -4101,7 +4730,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MemberOut"];
+                    "application/json": components["schemas"]["app__modules__workshops__schemas__MemberOut"];
                 };
             };
             /** @description Validation Error */
@@ -4538,6 +5167,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetricsOut"];
+                };
+            };
+        };
+    };
+    attribute_fields_api_v1_catalog_attributes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: components["schemas"]["AttributeFieldOut"][];
+                    };
                 };
             };
         };
@@ -6051,37 +6702,6 @@ export interface operations {
             };
         };
     };
-    stock_value_api_v1_workshops__workshop_id__inventory_value_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                workshop_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["StockValueOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     list_rates_api_v1_workshops__workshop_id__inventory_rates_get: {
         parameters: {
             query?: never;
@@ -6436,6 +7056,613 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    todo_api_v1_admin_todo_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TodoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_duplicate_api_v1_admin_todo_duplicates_dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_fields_api_v1_admin_catalog_attributes_get: {
+        parameters: {
+            query?: {
+                kind?: components["schemas"]["ItemKind"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_field_api_v1_admin_catalog_attributes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_field_api_v1_admin_catalog_attributes__field_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_field_api_v1_admin_catalog_attributes__field_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    order_fields_api_v1_admin_catalog_attributes_order__kind__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["schemas"]["ItemKind"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_option_api_v1_admin_catalog_attributes__field_id__options_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OptionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_option_api_v1_admin_catalog_attributes_options__option_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                option_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_option_api_v1_admin_catalog_attributes_options__option_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                option_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OptionUpdateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    order_options_api_v1_admin_catalog_attributes__field_id__options_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pending_invitations_api_v1_admin_staff_invitations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffInvitationOut"][];
+                };
+            };
+        };
+    };
+    invite_staff_api_v1_admin_staff_invitations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffInviteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffInvitationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_staff_invitation_api_v1_admin_staff_invitations__invitation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_api_v1_staff_invitations_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_api_v1_staff_invitations_accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffAcceptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenPair"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_workshops_api_v1_admin_workshops_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWorkshopPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_workshop_api_v1_admin_workshops__workshop_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workshop_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminWorkshopDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workshop_stock_api_v1_admin_workshops__workshop_id__stock_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workshop_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkshopStockPage"];
                 };
             };
             /** @description Validation Error */

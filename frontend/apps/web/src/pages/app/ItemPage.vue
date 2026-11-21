@@ -1,5 +1,5 @@
 <template>
-  <PageHeader :title="item?.name ?? '…'" :back="{ name: 'stock' }" :back-label="t('nav.stock')">
+  <PageHeader :title="item?.name ?? '…'" :subtitle="item?.my_name ?? undefined" :back="{ name: 'stock' }" :back-label="t('nav.stock')">
     <template #actions>
       <RouterLink
         v-if="item"
@@ -36,7 +36,10 @@
             >{{ c.label }}</span>
           </div>
           <span v-if="item.vehicles" class="text-[14px] text-muted">{{ t('item.fits', { cars: item.vehicles }) }}</span>
-          <span v-if="item.catalog_item" class="text-[13px] text-faint">{{ t('item.fromCatalog') }}</span>
+          <AttributesView :kind="item.kind" :values="item.attributes" class="mt-1" />
+          <span v-if="item.catalog_status === 'linked'" class="text-[13px] text-faint">{{ t('item.fromCatalog') }}</span>
+          <span v-else-if="item.catalog_status === 'pending'" class="self-start rounded-md bg-primary-soft px-2 py-0.5 text-[13px] font-semibold">{{ t('item.review.pending') }}</span>
+          <span v-else-if="item.catalog_status === 'rejected'" class="self-start rounded-md bg-warn-bg px-2 py-0.5 text-[13px] font-semibold text-warn">{{ t('item.review.rejected') }}</span>
         </div>
       </section>
 
@@ -78,10 +81,6 @@
             <dt class="text-muted">{{ t('item.salePrice') }}</dt>
             <dd class="m-0 text-[17px] font-bold">{{ money(item.sale_price, item.sale_currency) }}</dd>
           </div>
-          <div v-if="!item.purchase_price_hidden" class="flex min-h-12 items-center justify-between gap-3">
-            <dt class="text-muted">{{ t('item.purchasePrice') }}</dt>
-            <dd class="m-0 font-semibold">{{ money(item.purchase_price, item.purchase_currency) }}</dd>
-          </div>
           <div v-for="lv in item.levels" :key="lv.location_id" class="flex min-h-12 items-center justify-between gap-3">
             <dt class="text-muted">{{ places.get(lv.location_id) ?? '…' }}</dt>
             <dd class="m-0 font-semibold">{{ t('common.pcs', { n: lv.quantity }) }}</dd>
@@ -113,7 +112,6 @@
       :open="!!sheet"
       :kind="sheet"
       :item="item"
-      :show-purchase="session.seesPurchase"
       @close="sheet = null"
       @submit="submitMove"
     />
@@ -127,6 +125,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import LoadError from '@/components/LoadError.vue'
+import AttributesView from '@/components/AttributesView.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import MoveSheet, { type MoveKind } from '@/components/stock/MoveSheet.vue'
 import { call, client, raw } from '@/lib/api'

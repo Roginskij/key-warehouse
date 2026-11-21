@@ -9,9 +9,14 @@ from app.core.errors import register_error_handlers
 from app.core.ratelimit import GlobalRateLimitMiddleware
 from app.modules.admin.metrics import router as metrics_router
 from app.modules.admin.router import router as admin_router
+from app.modules.admin.staff import public_router as staff_public_router
+from app.modules.admin.staff import router as staff_router
+from app.modules.admin.workshops import router as admin_workshops_router
 from app.modules.auth.router import router as auth_router
 from app.modules.catalog.admin_router import router as catalog_admin_router
+from app.modules.catalog.attributes_admin import router as attributes_admin_router
 from app.modules.catalog.router import router as catalog_router
+from app.modules.catalog.todo import router as todo_router
 from app.modules.inventory.router import router as inventory_router
 from app.modules.reference.router import router as reference_router
 from app.modules.shop.router import admin_router as waitlist_admin_router
@@ -53,6 +58,11 @@ def create_app() -> FastAPI:
         catalog_admin_router,
         inventory_router,
         profile_router,
+        todo_router,
+        attributes_admin_router,
+        staff_router,
+        staff_public_router,
+        admin_workshops_router,
         shop_router,
         waitlist_admin_router,
     ):

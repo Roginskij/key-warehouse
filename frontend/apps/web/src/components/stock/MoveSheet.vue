@@ -14,7 +14,6 @@
           </div>
         </details>
       </template>
-      <UIField v-if="kind === 'receipt' && showPurchase" v-model="price" :label="t('move.purchasePrice')" inputmode="decimal" :hint="t('move.optional')" />
       <UIField v-if="kind === 'writeoff'" v-model="note" :label="t('move.reason')" :placeholder="t('move.reasonPlaceholder')" />
       <UIButton type="submit" size="lg" block>{{ t(`move.confirm.${kind}`) }}</UIButton>
     </form>
@@ -31,7 +30,7 @@ import { useLocationNames } from '@/lib/queries'
 
 export type MoveKind = 'sale' | 'receipt' | 'writeoff' | 'transfer'
 
-const props = defineProps<{ open: boolean; kind: MoveKind; item: Item; showPurchase: boolean }>()
+const props = defineProps<{ open: boolean; kind: MoveKind; item: Item }>()
 const emit = defineEmits<{ close: []; submit: [MovementBody] }>()
 const { t } = useI18n()
 const places = useLocationNames()
@@ -78,7 +77,6 @@ function submit() {
     if (client.value) body.client_name = client.value
     if (phone.value) body.client_phone = phone.value
   }
-  if (props.kind === 'receipt' && price.value && props.showPurchase) body.unit_price = price.value.replace(',', '.')
   if (note.value) body.note = note.value
   emit('submit', body)
 }

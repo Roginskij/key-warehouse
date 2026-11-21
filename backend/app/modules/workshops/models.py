@@ -81,16 +81,10 @@ class Membership(UUIDPk, Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     role: Mapped[str] = mapped_column(String(16))
-    # Owners always see purchase prices; for masters the owner decides.
-    can_see_purchase_prices: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     workshop: Mapped[Workshop] = relationship(back_populates="memberships", lazy="joined")
     user: Mapped[User] = relationship(lazy="joined")
-
-    @property
-    def sees_purchase_prices(self) -> bool:
-        return self.role == WorkshopRole.OWNER or self.can_see_purchase_prices
 
 
 class Invitation(UUIDPk, Base):
@@ -101,7 +95,6 @@ class Invitation(UUIDPk, Base):
     )
     email: Mapped[str] = mapped_column(String(254), index=True)
     role: Mapped[str] = mapped_column(String(16))
-    can_see_purchase_prices: Mapped[bool] = mapped_column(Boolean, default=False)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     invited_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")

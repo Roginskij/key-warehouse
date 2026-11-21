@@ -40,7 +40,6 @@ def _my_workshop(m: Membership) -> MyWorkshopOut:
     return MyWorkshopOut(
         **WorkshopOut.model_validate(m.workshop).model_dump(),
         my_role=m.role,
-        sees_purchase_prices=m.sees_purchase_prices,
     )
 
 
@@ -51,7 +50,6 @@ def _member(m: Membership) -> MemberOut:
         email=m.user.email,
         full_name=m.user.full_name,
         role=m.role,
-        can_see_purchase_prices=m.sees_purchase_prices,
         joined_at=m.created_at,
     )
 
@@ -154,10 +152,6 @@ async def update_member(
         ):
             raise Conflict("workshops.last_owner", "A workshop must keep at least one owner")
         target.role = data.role
-    if data.can_see_purchase_prices is not None:
-        target.can_see_purchase_prices = data.can_see_purchase_prices
-    if target.role == WorkshopRole.OWNER:
-        target.can_see_purchase_prices = True
     await session.commit()
     await session.refresh(target)
     return _member(target)
@@ -235,7 +229,6 @@ async def create_invitation(
         workshop_id=workshop_id,
         email=email,
         role=data.role,
-        can_see_purchase_prices=data.role == WorkshopRole.OWNER or data.can_see_purchase_prices,
         token_hash=hash_token(raw),
         invited_by_id=user.id,
         expires_at=utcnow() + timedelta(days=settings.invitation_ttl_days),
@@ -369,7 +362,6 @@ async def accept_invitation(
                 workshop_id=invitation.workshop_id,
                 user_id=user.id,
                 role=invitation.role,
-                can_see_purchase_prices=invitation.can_see_purchase_prices,
             )
         )
     invitation.accepted_at = utcnow()

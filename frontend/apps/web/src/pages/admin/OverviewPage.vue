@@ -1,6 +1,9 @@
 <template>
   <PageHeader :title="t('admin.overview.title')" :subtitle="t('admin.overview.subtitle')" />
   <div class="flex flex-col gap-4 p-3 md:p-0 md:pb-12">
+    <TodoToday v-if="session.can(...CATALOG)" />
+
+    <h2 class="m-0 mt-4 text-[20px] font-bold">{{ t('admin.overview.howItGoes') }}</h2>
     <LoadError v-if="isError && !m" :error="error" @retry="refetch()" />
     <div v-else-if="isPending" class="h-32 animate-pulse rounded-card bg-surface" />
     <template v-else-if="m">
@@ -12,15 +15,6 @@
         </div>
       </section>
       <p class="m-0 text-[14px] text-muted">{{ t('admin.overview.planNote') }}</p>
-
-      <RouterLink
-        v-if="m.pending_proposals"
-        :to="{ name: 'admin-proposals' }"
-        class="flex items-center gap-3 rounded-card border border-line bg-primary-soft p-4 font-semibold text-ink no-underline"
-      >
-        <UIIcon name="list" :size="22" />{{ t('admin.overview.reviewQueue', { n: m.pending_proposals }) }}
-        <UIIcon name="chevron" :size="20" class="ml-auto" />
-      </RouterLink>
 
       <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <section class="overflow-x-auto rounded-card border border-line bg-surface">
@@ -73,18 +67,21 @@
 </template>
 
 <script setup lang="ts">
-import { UIIcon } from '@kv/ui'
 import { useQuery } from '@tanstack/vue-query'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import TodoToday from '@/components/admin/TodoToday.vue'
 import LoadError from '@/components/LoadError.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { call, client } from '@/lib/api'
 import { errorText } from '@/lib/errors'
 import { num } from '@/lib/format'
 import { LOCALES } from '@/i18n'
+import { useSession } from '@/stores/session'
 
 const { t, locale } = useI18n()
+const session = useSession()
+const CATALOG = ['catalog.view', 'catalog.edit', 'catalog.moderate', 'catalog.import']
 const { data: m, isPending, isError, error, refetch } = useQuery({
   queryKey: ['admin-metrics'],
   queryFn: () => call(client.GET('/api/v1/admin/metrics')),

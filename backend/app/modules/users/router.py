@@ -23,7 +23,6 @@ async def _me(session, user) -> MeOut:
                 workshop_id=m.workshop_id,
                 workshop_name=m.workshop.name,
                 role=m.role,
-                sees_purchase_prices=m.sees_purchase_prices,
             )
             for m in memberships
         ],

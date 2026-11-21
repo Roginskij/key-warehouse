@@ -88,7 +88,9 @@ async def test_metrics(client):
     inv = f"{API}/workshops/{wid}/inventory"
     item = (
         await client.post(
-            f"{inv}/items", json={"kind": "blank", "name": "X", "quantity": 2}, headers=auth(owner)
+            f"{inv}/items",
+            json={"kind": "blank", "name": "X", "brand": "Silca", "code": "X1", "quantity": 2},
+            headers=auth(owner),
         )
     ).json()
     await client.post(

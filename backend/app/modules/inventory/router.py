@@ -1,7 +1,6 @@
 """Workshop inventory API: /workshops/{workshop_id}/inventory/...
 
 Every endpoint checks membership first (a workshop sees only its own data).
-Masters without `sees_purchase_prices` never receive purchase prices.
 """
 
 import json
@@ -18,8 +17,9 @@ from sqlalchemy import func, select
 
 from app.core.config import settings
 from app.core.deps import CurrentUser, SessionDep
-from app.core.errors import AppError, Conflict, Forbidden, NotFound
+from app.core.errors import AppError, Conflict, NotFound
 from app.core.security import utcnow
+from app.modules.catalog import attributes
 from app.modules.catalog.importer import read_table
 from app.modules.catalog.models import ItemKind, ItemStatus
 from app.modules.catalog.schemas import brief_out
@@ -35,6 +35,7 @@ from app.modules.inventory.models import (
     StorageLocation,
 )
 from app.modules.inventory.schemas import (
+    CATALOG_FIELDS,
     CatalogLinkIn,
     InventoryAuditOut,
     LevelOut,
@@ -52,7 +53,6 @@ from app.modules.inventory.schemas import (
     StockItemOut,
     StockItemPage,
     StockItemUpdateIn,
-    StockValueOut,
 )
 from app.modules.reference.models import Currency
 from app.modules.users.models import User
@@ -79,10 +79,6 @@ class Ctx:
     def wid(self) -> uuid.UUID:
         return self.membership.workshop_id
 
-    @property
-    def sees_purchase(self) -> bool:
-        return self.membership.sees_purchase_prices
-
 
 async def get_ctx(workshop_id: uuid.UUID, user: CurrentUser, session: SessionDep) -> Ctx:
     return Ctx(user=user, membership=await get_membership(session, workshop_id, user))
@@ -91,23 +87,21 @@ async def get_ctx(workshop_id: uuid.UUID, user: CurrentUser, session: SessionDep
 CtxDep = Annotated[Ctx, Depends(get_ctx)]
 
 
-def _require_purchase_access(ctx: Ctx) -> None:
-    if not ctx.sees_purchase:
-        raise Forbidden("inventory.purchase_prices_hidden", "Purchase prices are hidden for you")
-
-
 async def _check_currency(session, code: str | None) -> None:
     if code and await session.get(Currency, code) is None:
         raise AppError("reference.unknown_currency", message=f"Unknown currency {code}")
 
 
 def item_out(item: InventoryItem, ctx: Ctx, rates: dict[str, Decimal]) -> StockItemOut:
-    show = ctx.sees_purchase
     catalog = item.catalog_item
+    linked = catalog is not None and catalog.status == ItemStatus.ACTIVE
     return StockItemOut(
         id=item.id,
-        kind=item.kind,
-        name=item.name,
+        kind=catalog.kind if linked else item.kind,
+        name=catalog.name if linked else item.name,
+        my_name=item.name if linked and item.name != catalog.name else None,
+        attributes=(catalog.attributes if linked else item.attributes) or {},
+        catalog_status="linked" if linked else (item.catalog_review or "none"),
         brand=item.brand,
         code=item.code,
         vehicles=item.vehicles,
@@ -121,9 +115,6 @@ def item_out(item: InventoryItem, ctx: Ctx, rates: dict[str, Decimal]) -> StockI
         sale_price=item.sale_price,
         sale_currency=item.sale_currency,
         sale_price_in_base=service.to_base(item.sale_price, item.sale_currency, rates),
-        purchase_price=item.purchase_price if show else None,
-        purchase_currency=item.purchase_currency if show else None,
-        purchase_price_hidden=not show,
         catalog_item=brief_out(catalog)
         if catalog and catalog.status == ItemStatus.ACTIVE
         else None,
@@ -150,9 +141,6 @@ def movement_out(m: StockMovement, ctx: Ctx, users: dict, names: dict | None = N
     out = MovementOut.model_validate(m)
     out.user_name = users.get(m.user_id)
     out.item_name = (names or {}).get(m.item_id)
-    is_purchase = m.type in (MovementType.RECEIPT, MovementType.INITIAL)
-    if is_purchase and not ctx.sees_purchase:
-        out.unit_price = out.currency = None
     return out
 
 
@@ -298,38 +286,64 @@ async def list_items(
 
 @router.post("/items", response_model=StockItemCreatedOut, status_code=status.HTTP_201_CREATED)
 async def create_item(data: StockItemCreateIn, ctx: CtxDep, session: SessionDep):
-    if data.purchase_price is not None or data.purchase_currency:
-        _require_purchase_access(ctx)
-    for cur in (data.purchase_currency, data.sale_currency):
-        await _check_currency(session, cur)
-    if dup := await service.find_duplicate(session, ctx.wid, data.brand, data.code):
-        raise Conflict("inventory.duplicate", "This number is already in stock").with_params(
-            item_id=str(dup.id)
-        )
-    catalog_id = None
+    """From the catalog (catalog_item_id) or, if the key is not there, kind + name +
+    brand from the list + number: such an item works at once and goes to the admin."""
+    await _check_currency(session, data.sale_currency)
+    cat = None
     if data.catalog_item_id:
         cat = await resolve_item(session, data.catalog_item_id)
         if cat.status != ItemStatus.ACTIVE:
             raise AppError("catalog.item_not_active", message="Catalog item is not active")
-        catalog_id = cat.id
-    base = ctx.workshop.base_currency
-    fields = data.model_dump(
-        exclude={"catalog_item_id", "quantity", "location_id", "stale", "brand", "code"}
-    )
+        dup = await session.scalar(
+            select(InventoryItem).where(
+                InventoryItem.workshop_id == ctx.wid,
+                InventoryItem.catalog_item_id == cat.id,
+                InventoryItem.is_archived.is_(False),
+            )
+        )
+        brand, code = (cat.codes[0].brand.name, cat.codes[0].code) if cat.codes else (None, None)
+    else:
+        if not (data.kind and data.brand and data.code):
+            raise AppError(
+                "inventory.new_item_details_required",
+                message="Not from the catalog: kind, brand and number are required",
+            )
+        brand = await service.canonical_brand(session, data.brand)
+        code = data.code
+        dup = await service.find_duplicate(session, ctx.wid, brand, code)
+    if dup:
+        raise Conflict("inventory.duplicate", "This number is already in stock").with_params(
+            item_id=str(dup.id)
+        )
+
     item = InventoryItem(
         workshop_id=ctx.wid,
-        catalog_item_id=catalog_id,
         created_by_id=ctx.user.id,
         quantity=0,
-        **fields,
+        kind=data.kind or (cat.kind if cat else ItemKind.OTHER),
+        name=_text(data.name) or (cat.name if cat else f"{brand} {code}"),
+        frequency_mhz=data.frequency_mhz,
+        chip_type=data.chip_type,
+        fcc_id=data.fcc_id,
+        # Not from the catalog: the characteristics go to review with the item.
+        attributes=(
+            await attributes.clean(session, data.kind, data.attributes)
+            if data.kind and not cat
+            else {}
+        ),
+        sale_price=data.sale_price,
+        sale_currency=data.sale_currency,
+        min_quantity=data.min_quantity,
+        notes=data.notes,
+        public_visible=data.public_visible,
     )
-    if item.purchase_price is not None and not item.purchase_currency:
-        item.purchase_currency = base
     if item.sale_price is not None and not item.sale_currency:
-        item.sale_currency = base
+        item.sale_currency = ctx.workshop.base_currency
     if data.stale:
         item.marked_stale_at = utcnow()
-    service.apply_code(item, data.brand, data.code)
+    service.apply_code(item, brand, code)
+    if cat:
+        service.take_from_catalog(item, cat)
     session.add(item)
     await session.flush()
     service.audit(session, ctx.wid, ctx.user, "item.create", item.id, name=item.name)
@@ -351,6 +365,10 @@ async def create_item(data: StockItemCreateIn, ctx: CtxDep, session: SessionDep)
     return StockItemCreatedOut(**item_out(item, ctx, rates).model_dump(), catalog=link)
 
 
+def _text(v: str | None) -> str | None:
+    return v.strip() if v and v.strip() else None
+
+
 @router.get("/items/{item_id}", response_model=StockItemOut)
 async def get_item(item_id: uuid.UUID, ctx: CtxDep, session: SessionDep):
     item = await service.get_item(session, ctx.wid, item_id)
@@ -363,15 +381,36 @@ async def update_item(
 ):
     item = await service.get_item(session, ctx.wid, item_id)
     changes = data.model_dump(exclude_unset=True)
-    if {"purchase_price", "purchase_currency"} & changes.keys():
-        _require_purchase_access(ctx)
-    for cur in (data.purchase_currency, data.sale_currency):
-        await _check_currency(session, cur)
+    await _check_currency(session, data.sale_currency)
+    if item.catalog_item_id and CATALOG_FIELDS & changes.keys():
+        raise AppError(
+            "inventory.catalog_fields_locked",
+            message="Name, kind and numbers of a catalog item are set by the catalog",
+        )
+    if "name" in changes:
+        # Empty = back to the catalog name (or brand + number).
+        changes["name"] = _text(changes["name"]) or (
+            item.catalog_item.name if item.catalog_item_id else f"{item.brand} {item.code}"
+        )
 
+    if "attributes" in changes or "kind" in changes:
+        changes["attributes"] = await attributes.clean(
+            session,
+            changes.get("kind") or item.kind,
+            changes.get("attributes", item.attributes),
+            existing=item.attributes,
+        )
     diff = {}
+    relink = False
     if "brand" in changes or "code" in changes:
-        brand = changes.pop("brand", item.brand)
+        brand = await service.canonical_brand(session, changes.pop("brand", item.brand))
         code = changes.pop("code", item.code)
+        if not brand or not code:
+            raise AppError(
+                "inventory.new_item_details_required",
+                message="Brand from the list and number are required",
+            )
+        relink = True
         dup = await service.find_duplicate(session, ctx.wid, brand, code)
         if dup and dup.id != item.id:
             raise Conflict("inventory.duplicate", "This number is already in stock").with_params(
@@ -397,10 +436,11 @@ async def update_item(
             ]
             setattr(item, field, value)
     base = ctx.workshop.base_currency
-    if item.purchase_price is not None and not item.purchase_currency:
-        item.purchase_currency = base
     if item.sale_price is not None and not item.sale_currency:
         item.sale_currency = base
+    if relink:
+        # New number: maybe it is in the catalog now, otherwise it goes to review again.
+        await service.auto_link(session, ctx.user, item)
     if diff:
         service.audit(session, ctx.wid, ctx.user, "item.update", item.id, **diff)
     await session.commit()
@@ -446,13 +486,10 @@ async def set_catalog_link(
     item_id: uuid.UUID, data: CatalogLinkIn, ctx: CtxDep, session: SessionDep
 ):
     item = await service.get_item(session, ctx.wid, item_id)
-    if data.catalog_item_id:
-        cat = await resolve_item(session, data.catalog_item_id)
-        if cat.status != ItemStatus.ACTIVE:
-            raise AppError("catalog.item_not_active", message="Catalog item is not active")
-        item.catalog_item_id = cat.id
-    else:
-        item.catalog_item_id = None
+    cat = await resolve_item(session, data.catalog_item_id)
+    if cat.status != ItemStatus.ACTIVE:
+        raise AppError("catalog.item_not_active", message="Catalog item is not active")
+    service.take_from_catalog(item, cat)
     service.audit(
         session,
         ctx.wid,
@@ -480,8 +517,6 @@ async def create_movement(item_id: uuid.UUID, data: MovementIn, ctx: CtxDep, ses
     to the item's sale price."""
     if data.type == MovementType.INITIAL:
         raise AppError("inventory.bad_movement_type", message="'initial' is set on creation only")
-    if data.type == MovementType.RECEIPT and data.unit_price is not None:
-        _require_purchase_access(ctx)
     await _check_currency(session, data.currency)
     item = await service.get_item(session, ctx.wid, item_id, lock=True)
     movement = await service.move(
@@ -492,8 +527,9 @@ async def create_movement(item_id: uuid.UUID, data: MovementIn, ctx: CtxDep, ses
         data.quantity,
         location_id=data.location_id,
         to_location_id=data.to_location_id,
-        unit_price=data.unit_price,
-        currency=data.currency,
+        # A price belongs to sales only.
+        unit_price=data.unit_price if data.type == MovementType.SALE else None,
+        currency=data.currency if data.type == MovementType.SALE else None,
         client_name=data.client_name,
         client_phone=data.client_phone,
         note=data.note,
@@ -569,13 +605,6 @@ async def reorder_list(ctx: CtxDep, session: SessionDep):
     ).all()
     rates = await service.rates_map(session, ctx.workshop)
     return StockItemPage(items=[item_out(i, ctx, rates) for i in items], total=len(items))
-
-
-@router.get("/value", response_model=StockValueOut)
-async def stock_value(ctx: CtxDep, session: SessionDep):
-    """How much money lies on the shelves (purchase prices)."""
-    _require_purchase_access(ctx)
-    return await service.stock_value(session, ctx.workshop)
 
 
 @router.get("/rates", response_model=list[RateOut])
@@ -729,9 +758,7 @@ async def export_stock(ctx: CtxDep, session: SessionDep):
             )
         ).all()
     )
-    content = excel.export_xlsx(
-        list(items), locations, ctx.sees_purchase, ctx.workshop.base_currency
-    )
+    content = excel.export_xlsx(list(items), locations)
     stamp = utcnow().strftime("%Y-%m-%d")
     return Response(
         content,
@@ -758,10 +785,4 @@ async def audit_log(
     rows = await session.scalars(
         stmt.order_by(InventoryAudit.created_at.desc()).limit(limit).offset(offset)
     )
-    out = []
-    for a in rows.all():
-        o = InventoryAuditOut.model_validate(a)
-        if not ctx.sees_purchase:
-            o.data = {k: v for k, v in o.data.items() if not k.startswith("purchase")}
-        out.append(o)
-    return out
+    return [InventoryAuditOut.model_validate(a) for a in rows.all()]

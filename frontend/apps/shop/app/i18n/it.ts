@@ -87,6 +87,12 @@ export default {
     text: 'La chiave potrebbe essere stata rinominata o unita a un’altra.',
     home: 'Home',
   },
+  attrs: {
+    title: 'Caratteristiche',
+    yes: 'sì',
+    no: 'no',
+    bad: 'Valore non valido',
+  },
   kinds: {
     blank: 'Chiave grezza',
     car_key: 'Chiave auto',

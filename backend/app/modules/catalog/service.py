@@ -186,6 +186,8 @@ async def link_stock(session: AsyncSession, item: CatalogItem, brand: Brand, cod
         if stock.brand and normalize_brand(stock.brand) != brand.name_normalized:
             continue
         stock.catalog_item_id = item.id
+        stock.catalog_review = None
+        stock.kind = item.kind
         linked += 1
     return linked
 
